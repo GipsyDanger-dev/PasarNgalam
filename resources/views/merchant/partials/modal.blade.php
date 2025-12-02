@@ -1,111 +1,140 @@
-<div x-show="showModal" class="fixed inset-0 z-50 overflow-y-auto" x-cloak>
-    <div x-show="showModal" x-transition.opacity class="fixed inset-0 bg-black/80 backdrop-blur-sm"></div>
-
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div x-show="showModal" 
-                @click.away="resetForm()"
-                x-transition:enter="ease-out duration-300"
-                x-transition:enter-start="opacity-0 translate-y-10 scale-95"
-                x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-                class="relative bg-[#0F172A] border border-gray-700 rounded-3xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
-            
-            <!-- Modal Header -->
-            <div class="px-8 py-5 border-b border-gray-700 flex justify-between items-center bg-gray-800/30 rounded-t-3xl">
-                <div>
-                    <h3 class="text-xl font-bold text-white" x-text="modalMode === 'create' ? 'Tambah Menu Baru' : 'Edit Menu'"></h3>
-                    <p class="text-xs text-gray-400 mt-0.5">Lengkapi informasi menu dengan detail.</p>
-                </div>
-                <button @click="resetForm()" class="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-full transition">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
+<div x-show="showModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm" x-cloak>
+    <!-- Modal Container -->
+    <div class="bg-[#0B1120] rounded-2xl w-full max-w-2xl border border-[#1E293B] shadow-2xl relative flex flex-col max-h-[90vh]" @click.away="showModal = false">
+        
+        <!-- 1. Header Modal -->
+        <div class="px-6 py-5 border-b border-[#1E293B] flex justify-between items-start">
+            <div>
+                <h3 class="text-xl font-bold text-white" x-text="modalMode === 'edit' ? 'Edit Menu' : 'Tambah Menu'"></h3>
+                <p class="text-xs text-gray-400 mt-1">Lengkapi informasi menu dengan detail.</p>
             </div>
+            <button @click="showModal = false" class="bg-[#1E293B] hover:bg-[#334155] text-gray-400 hover:text-white p-2 rounded-full transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        
+        <!-- 2. Body Modal (Scrollable) -->
+        <div class="p-6 overflow-y-auto modal-scroll space-y-6">
+            <form :action="formAction" method="POST" enctype="multipart/form-data" id="menuForm">
+                @csrf
+                <!-- Method Spoofing untuk Edit (PUT) -->
+                <template x-if="modalMode === 'edit'"><input type="hidden" name="_method" value="PUT"></template>
 
-            <!-- Modal Body -->
-            <div class="p-8 overflow-y-auto no-scrollbar space-y-6">
-                
-                <!-- Upload Image -->
-                <div class="flex gap-6 items-start">
-                    <div class="w-28 h-28 rounded-2xl bg-gray-800 border-2 border-dashed border-gray-600 flex items-center justify-center overflow-hidden relative flex-shrink-0">
+                <!-- SECTION: FOTO MAKANAN -->
+                <div class="flex gap-5 items-start mb-6">
+                    <!-- Preview Image Box -->
+                    <div class="w-24 h-24 rounded-2xl bg-[#151F32] border border-[#334155] flex-shrink-0 overflow-hidden flex items-center justify-center relative shadow-lg group">
                         <template x-if="!formData.imagePreview">
-                            <div class="text-center p-2">
-                                <svg class="w-8 h-8 text-gray-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            <div class="text-center text-gray-500">
+                                <svg class="w-8 h-8 mx-auto mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                             </div>
                         </template>
                         <template x-if="formData.imagePreview">
                             <img :src="formData.imagePreview" class="w-full h-full object-cover">
                         </template>
                     </div>
-                    <div class="flex-1">
-                        <label class="block text-sm font-bold text-gray-300 mb-2">Foto Makanan</label>
-                        <input type="file" @change="handleFileUpload" accept="image/*" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-brand-green file:text-black hover:file:bg-green-400 cursor-pointer border border-gray-700 rounded-xl bg-gray-800/50">
-                        <p class="text-xs text-gray-500 mt-2">Disarankan rasio 1:1, max 2MB.</p>
+
+                    <!-- Input File -->
+                    <div class="flex-1 pt-1">
+                        <label class="block text-sm font-bold text-white mb-2">Foto Makanan</label>
+                        <div class="flex items-center gap-0 w-full border border-[#334155] bg-[#151F32] rounded-lg overflow-hidden h-10">
+                            <label class="bg-[#00E073] hover:bg-[#00C062] text-black font-bold h-full px-4 flex items-center cursor-pointer transition text-sm whitespace-nowrap">
+                                Choose File
+                                <input type="file" name="image" @change="handleFileUpload" class="hidden" accept="image/*">
+                            </label>
+                            <span class="px-3 text-gray-500 text-sm truncate w-full">No file chosen</span>
+                        </div>
+                        <p class="text-[10px] text-gray-500 mt-2">Disarankan rasio 1:1, max 2MB.</p>
                     </div>
                 </div>
 
-                <!-- Inputs -->
+                <!-- SECTION: INFORMASI DASAR -->
                 <div class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold text-brand-green uppercase tracking-wider mb-2 ml-1">Informasi Dasar</label>
-                        <input x-model="formData.name" type="text" placeholder="Nama Menu (Contoh: Nasi Goreng)" class="form-input mb-4">
-                        <textarea x-model="formData.description" rows="2" placeholder="Deskripsi (Contoh: Pedas manis dengan ayam suwir)" class="form-input"></textarea>
-                    </div>
+                    <label class="text-[#00E073] text-[10px] font-bold uppercase tracking-wider block mb-1">Informasi Dasar</label>
                     
-                    <div class="grid grid-cols-2 gap-5">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2 ml-1">Harga (Rp)</label>
-                            <input x-model="formData.price" type="number" placeholder="0" class="form-input font-mono text-lg">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2 ml-1">Kategori</label>
-                            <select x-model="formData.category" class="form-input">
+                    <input type="text" name="name" x-model="formData.name" placeholder="Nama Menu (Contoh: Paket Nasi Empal)" 
+                        class="bg-[#151F32] border border-[#334155] text-white text-sm rounded-lg focus:ring-1 focus:ring-[#00E073] focus:border-[#00E073] block w-full p-3 placeholder-gray-500">
+                    
+                    <textarea name="description" x-model="formData.description" rows="3" placeholder="Deskripsi menu..." 
+                        class="bg-[#151F32] border border-[#334155] text-white text-sm rounded-lg focus:ring-1 focus:ring-[#00E073] focus:border-[#00E073] block w-full p-3 placeholder-gray-500"></textarea>
+                </div>
+
+                <!-- SECTION: HARGA & KATEGORI -->
+                <div class="grid grid-cols-2 gap-5 mt-4">
+                    <div>
+                        <label class="text-xs text-gray-300 block mb-2">Harga (Rp)</label>
+                        <input type="number" name="price" x-model="formData.price" placeholder="35000" 
+                            class="bg-[#151F32] border border-[#334155] text-white text-sm rounded-lg focus:ring-1 focus:ring-[#00E073] focus:border-[#00E073] block w-full p-3 placeholder-gray-500">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-300 block mb-2">Kategori</label>
+                        <div class="relative">
+                            <select name="category" x-model="formData.category" 
+                                class="bg-[#151F32] border border-[#334155] text-white text-sm rounded-lg focus:ring-1 focus:ring-[#00E073] focus:border-[#00E073] block w-full p-3 appearance-none cursor-pointer">
                                 <option>Makanan Berat</option>
                                 <option>Cemilan</option>
                                 <option>Minuman</option>
                             </select>
+                            <div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-gray-400">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Add-ons -->
-                <div class="bg-gray-800/30 p-5 rounded-2xl border border-white/5">
+                <!-- SECTION: VARIAN / ADD-ON -->
+                <div class="bg-[#151F32]/50 border border-[#334155] rounded-xl p-5 mt-6">
                     <div class="flex justify-between items-center mb-4">
-                        <label class="block text-sm font-bold text-white flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 bg-brand-green rounded-full"></span>
-                            Varian / Add-on
-                        </label>
-                        <button @click="addAddon()" type="button" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg border border-gray-600 transition flex items-center gap-1">
+                        <div class="flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 bg-[#00E073] rounded-full"></span>
+                            <h4 class="text-white font-bold text-sm">Varian / Add-on</h4>
+                        </div>
+                        <button type="button" @click="addAddon()" class="bg-[#334155] hover:bg-[#475569] text-white text-xs px-3 py-1.5 rounded flex items-center gap-1 transition">
                             + Tambah
                         </button>
                     </div>
-                    
+
                     <div class="space-y-3">
                         <template x-for="(addon, index) in formData.addons" :key="index">
-                            <div class="flex gap-3 items-center animate-[fadeIn_0.3s_ease-out]">
+                            <div class="flex gap-3 items-center">
+                                <!-- Nama Addon -->
                                 <div class="flex-grow">
-                                    <input x-model="addon.name" type="text" placeholder="Nama Varian" class="form-input text-sm py-2">
+                                    <input type="text" placeholder="Nama (misal: Extra Pedas)" x-model="addon.name" 
+                                        class="bg-[#0B1120] border border-[#334155] text-white text-sm rounded-lg focus:ring-1 focus:ring-[#00E073] focus:border-[#00E073] block w-full p-2.5 placeholder-gray-600">
                                 </div>
+                                
+                                <!-- Harga Addon -->
                                 <div class="w-32 relative">
-                                    <span class="absolute left-3 top-2 text-gray-500 text-xs mt-0.5">Rp</span>
-                                    <input x-model="addon.price" type="number" placeholder="0" class="form-input text-sm py-2 pl-8 text-right">
+                                    <span class="absolute left-3 top-2.5 text-gray-500 text-xs">Rp</span>
+                                    <input type="number" placeholder="0" x-model="addon.price" 
+                                        class="bg-[#0B1120] border border-[#334155] text-white text-sm rounded-lg focus:ring-1 focus:ring-[#00E073] focus:border-[#00E073] block w-full p-2.5 pl-8 text-right placeholder-gray-600">
                                 </div>
-                                <button @click="removeAddon(index)" class="p-2 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-lg transition">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                
+                                <!-- Tombol Hapus -->
+                                <button type="button" @click="removeAddon(index)" class="w-10 h-10 flex items-center justify-center bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-lg transition border border-red-500/20">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                                 </button>
                             </div>
                         </template>
-                        <p class="text-xs text-gray-500 mt-2 ml-1" x-show="formData.addons.length > 0">*Isi harga 0 jika varian gratis.</p>
+                        
+                        <!-- Input Hidden untuk mengirim data addon ke backend sebagai JSON -->
+                        <input type="hidden" name="addons" :value="JSON.stringify(formData.addons)">
                     </div>
+                    <p class="text-[10px] text-gray-500 mt-3 ml-1">*Isi harga 0 jika varian gratis.</p>
                 </div>
-            </div>
 
-            <!-- Modal Footer -->
-            <div class="px-8 py-5 border-t border-gray-700 bg-gray-800/30 rounded-b-3xl flex gap-4">
-                <button @click="resetForm()" type="button" class="flex-1 py-3.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-medium transition border border-gray-600">Batal</button>
-                <button type="button" @click="console.log(formData); alert('Data tersimpan! Mode: ' + modalMode)" class="flex-1 py-3.5 bg-brand-green text-black rounded-xl font-bold shadow-[0_0_20px_rgba(0,224,115,0.2)] hover:shadow-[0_0_30px_rgba(0,224,115,0.4)] transition transform hover:-translate-y-0.5">
-                    <span x-text="modalMode === 'create' ? 'Simpan Menu Baru' : 'Simpan Perubahan'"></span>
-                </button>
-            </div>
-
+            </form>
         </div>
+
+        <!-- 3. Footer Modal -->
+        <div class="px-6 py-5 border-t border-[#1E293B] bg-[#0B1120] rounded-b-2xl flex gap-4">
+            <button type="button" @click="showModal = false" class="flex-1 py-3 bg-[#1E293B] hover:bg-[#334155] text-white rounded-lg font-medium transition border border-[#334155] text-sm">
+                Batal
+            </button>
+            <button type="button" onclick="document.getElementById('menuForm').submit()" class="flex-1 py-3 bg-[#00E073] hover:bg-[#00C062] text-black rounded-lg font-bold shadow-lg shadow-green-900/20 transition text-sm">
+                Simpan Perubahan
+            </button>
+        </div>
+
     </div>
 </div>
