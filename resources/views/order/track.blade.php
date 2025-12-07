@@ -118,166 +118,191 @@
     <!-- SCRIPT LEAFLET & ROUTING -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+    <!-- Pusher & Echo (for realtime updates). Make sure broadcasting is configured in .env -->
+    <script src="https://js.pusher.com/7.2/pusher.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.11.3/dist/echo.iife.js"></script>
 
     <script>
         let map;
         let markerDriver, markerMerchant, markerCustomer;
         let currentRoute;
 
+        // Static data loaded from server (Blade -> JS). We'll update driver coords via API.
+        const orderData = {
+            destLat: {{ $order->dest_latitude ?? -7.9826 }},
+            destLng: {{ $order->dest_longitude ?? 112.6308 }},
+            merchLat: {{ $order->merchant->latitude ?? -7.9826 }},
+            merchLng: {{ $order->merchant->longitude ?? 112.6308 }},
+            driverLat: {{ $order->driver && $order->driver->latitude !== null ? $order->driver->latitude : 'null' }},
+            driverLng: {{ $order->driver && $order->driver->longitude !== null ? $order->driver->longitude : 'null' }},
+            hasDriver: {{ $order->driver ? 'true' : 'false' }} === 'true'
+        };
+
         function initMap() {
-            // 1. DATA KOORDINAT
-            // Lokasi Customer (Tujuan)
-            var destLat = {{ $order->dest_latitude ?? -7.9826 }};
-            var destLng = {{ $order->dest_longitude ?? 112.6308 }};
-            
-            // Lokasi Merchant (Asal Makanan)
-            var merchLat = {{ $order->merchant->latitude ?? -7.9826 }}; 
-            var merchLng = {{ $order->merchant->longitude ?? 112.6308 }};
-
-            // Lokasi Driver (Realtime)
-            var driverLat = {{ $order->driver->latitude ?? 0 }};
-            var driverLng = {{ $order->driver->longitude ?? 0 }};
-            var hasDriver = {{ $order->driver ? 'true' : 'false' }} === 'true';
-
-            // 2. INIT MAP (Jika belum ada)
             if (!map) {
-                map = L.map('map').setView([destLat, destLng], 14);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap'
-            }).addTo(map);
+                map = L.map('map').setView([orderData.destLat, orderData.destLng], 14);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap'
+                }).addTo(map);
             }
 
-            // 3. UPDATE ATAU CREATE MARKERS
-            // Marker Customer (Tujuan - Hijau)
+            // Initial draw
+            updateMarkersAndRoute();
+        }
+
+        function updateMarkersAndRoute() {
+            const destLat = orderData.destLat;
+            const destLng = orderData.destLng;
+            const merchLat = orderData.merchLat;
+            const merchLng = orderData.merchLng;
+            const driverLat = orderData.driverLat;
+            const driverLng = orderData.driverLng;
+            const hasDriver = !!orderData.hasDriver && driverLat !== null && driverLng !== null;
+
+            // CUSTOM ICON - Green untuk Customer (Tujuan)
+            const greenIcon = L.icon({
+                iconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48Y2lyY2xlIGN4PSIyMCIgY3k9IjIwIiByPSIxOCIgZmlsbD0iIzAwRTA3MyIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBhdHRlcm4gaWQ9ImRvdHMiIHg9IjAiIHk9IjAiIHdpZHRoPSI0IiBoZWlnaHQ9IjQiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiMwMEVBNzMiLz48Y2lyY2xlIGN4PSIyIiBjeT0iMiIgcj0iMSIgZmlsbD0id2hpdGUiLz48L3BhdHRlcm4+PHRleHQgeD0iMjAiIHk9IjI0IiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0id2hpdGUiPvCfk5I8L3RleHQ+PC9zdmc+',
+                iconSize: [40, 40],
+                iconAnchor: [20, 40],
+                popupAnchor: [0, -40]
+            });
+
+            // CUSTOM ICON - Red untuk Merchant (Warung)
+            const redIcon = L.icon({
+                iconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48Y2lyY2xlIGN4PSIyMCIgY3k9IjIwIiByPSIxOCIgZmlsbD0iI0VGNDQ0NCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iMjAiIHk9IjI0IiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0id2hpdGUiPvCfk5c8L3RleHQ+PC9zdmc+',
+                iconSize: [40, 40],
+                iconAnchor: [20, 40],
+                popupAnchor: [0, -40]
+            });
+
+            // CUSTOM ICON - Blue untuk Driver
+            const blueIcon = L.icon({
+                iconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48Y2lyY2xlIGN4PSIyMCIgY3k9IjIwIiByPSIxOCIgZmlsbD0iIzMzOTlGRiIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iMjAiIHk9IjI0IiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0id2hpdGUiPvu1s9G2IDwvdGV4dD48L3N2Zz4=',
+                iconSize: [40, 40],
+                iconAnchor: [20, 40],
+                popupAnchor: [0, -40]
+            });
+
+            // Customer marker (Green - Tujuan)
             if (!markerCustomer) {
-                markerCustomer = L.marker([destLat, destLng], {
-                    icon: L.icon({
-                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                        iconSize: [25, 41],
-                        iconAnchor: [12, 41],
-                        popupAnchor: [1, -34],
-                        shadowSize: [41, 41]
-                    })
-                }).addTo(map);
+                markerCustomer = L.marker([destLat, destLng], { icon: greenIcon }).addTo(map);
                 markerCustomer.bindPopup('<b>📦 Lokasi Tujuan</b><br>Pesanan Anda');
             } else {
                 markerCustomer.setLatLng([destLat, destLng]);
             }
 
-            // Marker Merchant (Asal - Merah)
+            // Merchant marker (Red - Warung)
             if (!markerMerchant) {
-                markerMerchant = L.marker([merchLat, merchLng], {
-                    icon: L.icon({
-                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                        iconSize: [25, 41],
-                        iconAnchor: [12, 41],
-                        popupAnchor: [1, -34],
-                        shadowSize: [41, 41]
-                    })
-                }).addTo(map);
+                markerMerchant = L.marker([merchLat, merchLng], { icon: redIcon }).addTo(map);
                 markerMerchant.bindPopup('<b>🍽️ Warung</b><br>{{ $order->merchant->store_name ?? "Merchant" }}');
             } else {
                 markerMerchant.setLatLng([merchLat, merchLng]);
             }
 
-            // Marker Driver (Biru - Realtime)
-            if (hasDriver && driverLat !== 0 && driverLng !== 0) {
+            // Driver marker (Blue - Driver) (may be null)
+            if (hasDriver) {
                 if (!markerDriver) {
-                    markerDriver = L.marker([driverLat, driverLng], {
-                        icon: L.icon({
-                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                            iconSize: [25, 41],
-                            iconAnchor: [12, 41],
-                            popupAnchor: [1, -34],
-                            shadowSize: [41, 41]
-                        })
-                    }).addTo(map);
+                    markerDriver = L.marker([driverLat, driverLng], { icon: blueIcon }).addTo(map);
                     markerDriver.bindPopup('<b>🛵 Driver</b><br>{{ $order->driver->name ?? "Driver" }}');
                 } else {
                     markerDriver.setLatLng([driverLat, driverLng]);
                 }
             } else if (markerDriver) {
-                // Remove driver marker jika driver tidak ada atau koordinat 0,0
-                map.removeLayer(markerDriver);
+                // remove old driver marker
+                try { map.removeLayer(markerDriver); } catch(e) {}
                 markerDriver = null;
             }
 
-            // 4. DRAW ROUTE (Merchant -> Driver -> Customer ATAU Merchant -> Customer)
-            // Hapus route lama jika ada
+            // Remove old route
             if (currentRoute) {
-                map.removeControl(currentRoute);
+                try { map.removeControl(currentRoute); } catch(e) {}
+                currentRoute = null;
             }
 
-            if (hasDriver && driverLat !== 0 && driverLng !== 0) {
-                // Route: Merchant -> Driver -> Customer
-                currentRoute = L.Routing.control({
-                    waypoints: [
-                        L.latLng(merchLat, merchLng),  // Dari Merchant
-                        L.latLng(driverLat, driverLng), // Ke Driver
-                        L.latLng(destLat, destLng)      // Ke Customer
-                    ],
-                    routeWhileDragging: false,
-                    show: false,
-                    addWaypoints: false,
-                    lineOptions: {
-                        styles: [{color: '#00E073', opacity: 0.8, weight: 5}]
-                    }
-                }).addTo(map);
+            // Draw route
+            if (hasDriver) {
+                currentRoute = L.Routing.control({ waypoints: [ L.latLng(merchLat, merchLng), L.latLng(driverLat, driverLng), L.latLng(destLat, destLng) ], routeWhileDragging: false, show: false, addWaypoints: false, lineOptions: { styles: [{color: '#00E073', opacity: 0.8, weight: 5}] } }).addTo(map);
             } else {
-                // Route: Merchant -> Customer (jika driver belum ditemukan)
-                currentRoute = L.Routing.control({
-                    waypoints: [
-                        L.latLng(merchLat, merchLng),
-                        L.latLng(destLat, destLng)
-                    ],
-                    routeWhileDragging: false,
-                    show: false,
-                    addWaypoints: false,
-                    lineOptions: {
-                        styles: [{color: '#00E073', opacity: 0.8, weight: 5}]
-                    }
-                }).addTo(map);
+                currentRoute = L.Routing.control({ waypoints: [ L.latLng(merchLat, merchLng), L.latLng(destLat, destLng) ], routeWhileDragging: false, show: false, addWaypoints: false, lineOptions: { styles: [{color: '#00E073', opacity: 0.8, weight: 5}] } }).addTo(map);
             }
 
-            // 5. FIT BOUNDS (Zoom otomatis ke semua marker)
-            var boundsArray = [
-                [destLat, destLng],
-                [merchLat, merchLng]
-            ];
-            if (hasDriver && driverLat !== 0 && driverLng !== 0) {
-                boundsArray.push([driverLat, driverLng]);
+            // Fit bounds
+            const boundsArr = [ [destLat, destLng], [merchLat, merchLng] ];
+            if (hasDriver) boundsArr.push([driverLat, driverLng]);
+            try {
+                const bounds = L.latLngBounds(boundsArr);
+                map.fitBounds(bounds, { padding: [100, 100] });
+            } catch (e) {
+                // ignore if invalid bounds
             }
-            var bounds = L.latLngBounds(boundsArray);
-            map.fitBounds(bounds, {padding: [100, 100]});
         }
 
         // 6. INIT MAP SAAT PAGE LOAD
         document.addEventListener("DOMContentLoaded", function() {
             initMap();
             
-            // AUTO REFRESH SETIAP 5 DETIK UNTUK UPDATE DRIVER LOCATION
+            // AUTO REFRESH SETIAP 5 DETIK UNTUK UPDATE DRIVER LOCATION (fallback polling)
             setInterval(function() {
                 fetch('/api/order/{{ $order->id }}/location')
                     .then(response => response.json())
                     .then(data => {
-                        // Update marker dan route jika ada perubahan
-                        if (data.driver_latitude !== null && data.driver_latitude !== 0) {
-                            var newDriverLat = data.driver_latitude;
-                            var newDriverLng = data.driver_longitude;
-                            
-                            // Update atau create driver marker
-                            if (markerDriver) {
-                                markerDriver.setLatLng([newDriverLat, newDriverLng]);
-                            }
-                            // Re-draw route dengan lokasi driver terbaru
-                            initMap();
+                        // update orderData from API response (driver may be null)
+                        orderData.driverLat = (data.driver_latitude !== null && data.driver_latitude !== 0) ? data.driver_latitude : null;
+                        orderData.driverLng = (data.driver_longitude !== null && data.driver_longitude !== 0) ? data.driver_longitude : null;
+                        orderData.hasDriver = orderData.driverLat !== null && orderData.driverLng !== null;
+
+                        // update merchant/destination if backend provides fresher values
+                        if (data.merchant_latitude !== undefined && data.merchant_longitude !== undefined) {
+                            if (data.merchant_latitude !== null) orderData.merchLat = data.merchant_latitude;
+                            if (data.merchant_longitude !== null) orderData.merchLng = data.merchant_longitude;
                         }
+                        if (data.dest_latitude !== undefined && data.dest_longitude !== undefined) {
+                            if (data.dest_latitude !== null) orderData.destLat = data.dest_latitude;
+                            if (data.dest_longitude !== null) orderData.destLng = data.dest_longitude;
+                        }
+
+                        // Re-draw markers and route using updated orderData
+                        updateMarkersAndRoute();
                     })
                     .catch(err => console.log('Location update error:', err));
             }, 5000);
+
+            // Initialize Laravel Echo (Pusher) for realtime driver updates (best-effort)
+            try {
+                // Read config from env variables (may be empty in some setups)
+                const pusherKey = '{{ env('PUSHER_APP_KEY', '') }}';
+                const pusherCluster = '{{ env('PUSHER_APP_CLUSTER', '') }}';
+
+                if (pusherKey) {
+                    window.Pusher = Pusher;
+                    window.Echo = new window.Echo({
+                        broadcaster: 'pusher',
+                        key: pusherKey,
+                        cluster: pusherCluster || undefined,
+                        forceTLS: {{ env('PUSHER_SCHEME', 'https') === 'https' ? 'true' : 'false' }},
+                        encrypted: true,
+                    });
+
+                    // Subscribe to driver channel if we have a driver
+                    if (orderData.hasDriver && orderData.driverLat !== null) {
+                        const driverId = {{ $order->driver->id ?? 'null' }};
+                        if (driverId) {
+                            window.Echo.channel('driver.' + driverId)
+                                .listen('.driver.location.updated', function(e) {
+                                    // update orderData and redraw
+                                    if (e && e.latitude && e.longitude) {
+                                        orderData.driverLat = e.latitude;
+                                        orderData.driverLng = e.longitude;
+                                        orderData.hasDriver = true;
+                                        updateMarkersAndRoute();
+                                    }
+                                });
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Echo init error', e);
+            }
         });
     </script>
 

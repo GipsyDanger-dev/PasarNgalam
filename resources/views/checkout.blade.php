@@ -133,6 +133,7 @@
             @csrf
             <input type="hidden" name="cart_data" id="cart_json">
             <input type="hidden" name="total_amount" id="total_amount">
+            <input type="hidden" name="payment_method" id="payment_method" x-model="paymentMethod">
             <input type="hidden" name="latitude" id="lat_input">
             <input type="hidden" name="longitude" id="lng_input">
 

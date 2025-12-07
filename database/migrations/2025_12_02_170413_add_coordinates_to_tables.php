@@ -8,24 +8,13 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
+     * NOTE: This migration was previously trying to alter a non-existent 'tables' table.
+     * The actual coordinate columns are now handled by 2025_12_04_044018_add_location_columns_to_users_table.php
+     * This migration is now a no-op and can be safely skipped.
      */
     public function up(): void
     {
-
-        Schema::table('users', function (Blueprint $table) {
-            if (!Schema::hasColumn('users', 'latitude')) {
-                $table->decimal('latitude', 10, 8)->nullable();
-                $table->decimal('longitude', 11, 8)->nullable();
-                $table->boolean('is_online')->default(false);
-            }
-        });
-
-        Schema::table('orders', function (Blueprint $table) {
-            if (!Schema::hasColumn('orders', 'dest_latitude')) {
-                $table->decimal('dest_latitude', 10, 8)->nullable();
-                $table->decimal('dest_longitude', 11, 8)->nullable();
-            }
-        });
+        // No-op: coordinate columns are added in the newer migration
     }
 
     /**
@@ -33,11 +22,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['latitude', 'longitude', 'is_online']);
-        });
-        Schema::table('orders', function (Blueprint $table) {
-            $table->dropColumn(['dest_latitude', 'dest_longitude']);
-        });
+        // No-op: coordinate columns are dropped in the newer migration
     }
 };

@@ -45,11 +45,127 @@
       x-data="{ 
           activeTab: 'menu', 
           showModal: false,
-          modalMode: 'create', // create / edit
+          modalMode: 'create',
+          
+          // Realtime notification system
+          notifications: [],
+          lastCheckTime: Math.floor(Date.now() / 1000) - 600,  // Start checking last 10 minutes
+          notificationSound: null,
           
           // Data Form Produk
           formAction: '{{ route('merchant.product.store') }}',
           formData: { id: null, name: '', description: '', price: '', is_available: true, imagePreview: null },
+
+          // Init - setup notification polling
+          init() {
+              console.log('🚀 Merchant Dashboard Initialized');
+              
+              // Create audio element for notification sound
+              this.notificationSound = new Audio('data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAAA=');
+              
+              // Request notification permission
+              if (Notification.permission === 'default') {
+                  Notification.requestPermission();
+              }
+              
+              // Check for orders immediately
+              this.checkNewOrders();
+              
+              // Then poll every 3 seconds
+              setInterval(() => this.checkNewOrders(), 3000);
+              
+              console.log('✅ Notification polling started');
+          },
+
+          async checkNewOrders() {
+              try {
+                  const url = '/api/merchant/recent-orders?last_check=' + this.lastCheckTime;
+                  console.log('📡 Checking orders:', url);
+                  
+                  const response = await fetch(url);
+                  const data = await response.json();
+                  
+                  console.log('📊 API Response:', data);
+                  
+                  if (data.has_new && data.new_orders && data.new_orders.length > 0) {
+                      console.log('🎉 Found ' + data.new_orders.length + ' new orders');
+                      data.new_orders.forEach(order => {
+                          this.showOrderNotification(order);
+                      });
+                      this.lastCheckTime = Math.floor(Date.now() / 1000);
+                  }
+              } catch(err) {
+                  console.error('❌ Notification check error:', err);
+              }
+          },
+
+          showOrderNotification(order) {
+              console.log('📢 Showing notification for order #' + order.id);
+              
+              // Play sound
+              try {
+                  this.playNotificationSound();
+              } catch(e) {
+                  console.log('Sound error:', e);
+              }
+
+              // Show notification
+              const notification = {
+                  id: 'notif-' + order.id,
+                  orderId: order.id,
+                  customerName: order.customer?.name || 'Customer',
+                  total: 'Rp ' + new Intl.NumberFormat('id-ID').format(order.total_price),
+                  items: order.items || '...',
+                  show: true
+              };
+              
+              this.notifications.unshift(notification);
+              console.log('✅ Notification added, total:', this.notifications.length);
+              
+              // Auto-remove after 8 seconds
+              setTimeout(() => {
+                  this.notifications = this.notifications.filter(n => n.id !== notification.id);
+              }, 8000);
+
+              // Also trigger browser notification if permitted
+              if (Notification.permission === 'granted') {
+                  new Notification('🛵 Pesanan Baru!', {
+                      body: 'Order #' + order.id + ' - ' + order.customer?.name,
+                      icon: 'https://ui-avatars.com/api/?name=PasarNgalam&background=00E073&color=000&size=100',
+                      tag: 'order-' + order.id,
+                      requireInteraction: true
+                  });
+              }
+          },
+
+          playNotificationSound() {
+              // Create a catchy notification sound - triple beep
+              try {
+                  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                  const now = audioContext.currentTime;
+                  
+                  // Beep 1 - high pitch
+                  const playBeep = (delay, frequency, duration = 0.25) => {
+                      const osc = audioContext.createOscillator();
+                      const gain = audioContext.createGain();
+                      osc.connect(gain);
+                      gain.connect(audioContext.destination);
+                      osc.frequency.value = frequency;
+                      osc.type = 'sine';
+                      gain.gain.setValueAtTime(0.4, now + delay);
+                      gain.gain.exponentialRampToValueAtTime(0.01, now + delay + duration);
+                      osc.start(now + delay);
+                      osc.stop(now + delay + duration);
+                  };
+                  
+                  // Play three beeps in sequence
+                  playBeep(0, 1200);      // First beep
+                  playBeep(0.15, 1400);   // Second beep (higher)
+                  playBeep(0.3, 1200);    // Third beep (back to first pitch)
+              } catch(e) {
+                  console.log('Sound error:', e);
+              }
+          },
 
           // Buka Modal (Create/Edit)
           openModal(mode, data = null) {
@@ -80,9 +196,51 @@
               this.formData = { id: null, name: '', description: '', price: '', is_available: true, imagePreview: null };
               if (closeModal) this.showModal = false;
           }
-      }">
+      }" 
+      x-init="init()"
+      @click="if(Notification.permission === 'default') Notification.requestPermission()">
 
-    <!-- NOTIFIKASI -->
+    <!-- NOTIFICATION POPUPS - FULL SCREEN MODAL -->
+    <template x-for="notif in notifications" :key="notif.id">
+        <div x-show="notif.show" 
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:leave="transition ease-in duration-200"
+             class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            
+            <div class="bg-gradient-to-b from-brand-green to-green-500 rounded-3xl shadow-2xl shadow-green-500/80 p-12 max-w-2xl w-full border-4 border-green-300 relative overflow-hidden">
+                
+                <!-- Background animation -->
+                <div class="absolute inset-0 opacity-10">
+                    <div class="absolute top-0 left-0 w-40 h-40 bg-white rounded-full mix-blend-overlay blur-3xl animate-pulse"></div>
+                    <div class="absolute bottom-0 right-0 w-40 h-40 bg-white rounded-full mix-blend-overlay blur-3xl animate-pulse"></div>
+                </div>
+
+                <!-- Content -->
+                <div class="relative z-10 text-center">
+                    <!-- Icon -->
+                    <div class="text-8xl animate-bounce mb-6 inline-block">🛵</div>
+                    
+                    <!-- Title -->
+                    <h2 class="font-black text-black text-5xl mb-4 drop-shadow-lg">🎉 PESANAN BARU!</h2>
+                    
+                    <!-- Order Details -->
+                    <div class="bg-black/20 rounded-2xl p-8 mb-8 backdrop-blur-sm">
+                        <p class="text-black text-2xl font-bold mb-3" x-text="'Order #' + notif.orderId"></p>
+                        <p class="text-black/90 text-xl mb-2" x-text="notif.customerName"></p>
+                        <p class="text-black text-lg font-bold" x-text="notif.total"></p>
+                    </div>
+
+                    <!-- Close button -->
+                    <button @click="notif.show = false" 
+                            class="bg-black/30 hover:bg-black/50 text-white font-bold py-3 px-8 rounded-2xl text-lg transition transform hover:scale-105 backdrop-blur-sm">
+                        ✓ Terima Pesanan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- NOTIFIKASI SESSION -->
     @if(session('success'))
     <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 3000)" 
          class="fixed top-24 right-4 z-50 bg-brand-green text-black px-6 py-3 rounded-xl font-bold shadow-lg transition-all">

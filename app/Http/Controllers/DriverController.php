@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\User;
 use App\Models\OrderActivity;
+use App\Events\DriverLocationUpdated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -13,11 +14,52 @@ class DriverController extends Controller
 {
     public function updateLocation(Request $request)
     {
-        $driver = User::find(Auth::id());
-        $driver->latitude = $request->latitude;
-        $driver->longitude = $request->longitude;
-        $driver->save();
-        return response()->json(['status' => 'ok']);
+        // Log incoming request and auth context for debugging
+        try {
+            \Log::debug('Driver updateLocation called', ['user_id' => Auth::id(), 'payload' => $request->all()]);
+        } catch (\Exception $e) {
+            // ignore logging errors
+        }
+
+        // Validate incoming coordinates and report validation errors as JSON
+        try {
+            $request->validate([
+                'latitude' => 'required|numeric',
+                'longitude' => 'required|numeric',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $ve) {
+            \Log::warning('Driver update validation failed', ['errors' => $ve->errors(), 'payload' => $request->all()]);
+            return response()->json(['errors' => $ve->errors()], 422);
+        }
+
+        $driver = Auth::user();
+        if (!$driver) {
+            \Log::warning('Driver update attempted without authenticated user', ['payload' => $request->all()]);
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+
+        try {
+            $driver->latitude = $request->input('latitude');
+            $driver->longitude = $request->input('longitude');
+            $driver->save();
+
+            // Broadcast realtime update for frontend listeners (if broadcasting is configured)
+            try {
+                event(new DriverLocationUpdated($driver->id, $driver->latitude, $driver->longitude));
+            } catch (\Exception $e) {
+                // don't break on broadcast failure; just continue
+                \Log::warning('Broadcast driver location failed: ' . $e->getMessage());
+            }
+
+            return response()->json(['status' => 'ok']);
+        } catch (\Exception $ex) {
+            \Log::error('Driver location update failed', ['message' => $ex->getMessage(), 'payload' => $request->all()]);
+            $response = ['error' => 'Could not update location'];
+            if (config('app.debug')) {
+                $response['exception'] = $ex->getMessage();
+            }
+            return response()->json($response, 500);
+        }
     }
 
     public function toggleStatus(Request $request)

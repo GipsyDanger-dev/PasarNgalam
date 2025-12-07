@@ -34,10 +34,78 @@ Route::get('/checkout', function () {
 // Proses Checkout (Masuk ke OrderController)
 Route::post('/checkout-process', [OrderController::class, 'checkout'])->name('checkout.process');
 
+// Payment Page (NEW)
+Route::get('/order/{id}/payment', [OrderController::class, 'payment'])->name('order.payment');
+Route::post('/order/{id}/confirm-payment', [OrderController::class, 'confirmPayment'])->name('order.confirmPayment');
+
 Route::get('/order/track/{id}', [OrderController::class, 'track'])->name('order.track');
 
 // API untuk realtime location tracking
 Route::get('/api/order/{id}/location', [OrderController::class, 'getLocationData']);
+
+// Development helper: create a test order with known coordinates
+// Only available when app environment is local or debug is true
+Route::get('/dev/create-test-order', function () {
+    if (!app()->environment('local') && !config('app.debug')) {
+        abort(404);
+    }
+
+    $merchant = \App\Models\User::where('role', 'merchant')->first();
+    $driver = \App\Models\User::where('role', 'driver')->first();
+    $customer = \App\Models\User::where('role', 'user')->first();
+
+    if (!$merchant || !$driver || !$customer) {
+        return response('Please ensure at least one merchant, driver and user exist in DB.', 400);
+    }
+
+    $order = \App\Models\Order::create([
+        'customer_id' => $customer->id,
+        'merchant_id' => $merchant->id,
+        'driver_id' => $driver->id,
+        'delivery_address' => 'Test Address',
+        'dest_latitude' => -7.9826,
+        'dest_longitude' => 112.6308,
+        'total_price' => 10000,
+        'delivery_fee' => 5000,
+        'status' => 'pending'
+    ]);
+
+    $link = route('order.track', $order->id);
+    return "Test order created: <a href=\"{$link}\">Open tracking for order #{$order->id}</a>";
+});
+
+// Development helper: simulate driver sending location updates
+// POST /dev/simulate-driver-location with lat/lng to update the first driver's position
+Route::post('/dev/simulate-driver-location', function (\Illuminate\Http\Request $request) {
+    if (!app()->environment('local') && !config('app.debug')) {
+        abort(404);
+    }
+
+    $driver = \App\Models\User::where('role', 'driver')->first();
+    if (!$driver) {
+        return response()->json(['error' => 'No driver found'], 400);
+    }
+
+    $lat = $request->input('latitude', $driver->latitude ?? -7.98);
+    $lng = $request->input('longitude', $driver->longitude ?? 112.63);
+
+    $driver->update(['latitude' => $lat, 'longitude' => $lng]);
+
+    // Also broadcast the update
+    try {
+        event(new \App\Events\DriverLocationUpdated($driver->id, $lat, $lng));
+    } catch (\Exception $e) {
+        \Log::warning('Broadcast failed in dev helper: ' . $e->getMessage());
+    }
+
+    return response()->json([
+        'status' => 'ok',
+        'driver_id' => $driver->id,
+        'latitude' => $lat,
+        'longitude' => $lng,
+        'message' => 'Driver location updated and broadcast'
+    ]);
+});
 
 // MERCHANT AREA (Wajib Login sebagai Merchant)
 Route::middleware(['auth'])->group(function () {
@@ -48,6 +116,14 @@ Route::middleware(['auth'])->group(function () {
         }
         return app(\App\Http\Controllers\MerchantController::class)->index();
     })->name('merchant.dashboard');
+
+    // NEW: API for realtime order notifications
+    Route::get('/api/merchant/recent-orders', function (\Illuminate\Http\Request $request) {
+        if (!Auth::check() || Auth::user()->role !== 'merchant') {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+        return app(\App\Http\Controllers\MerchantController::class)->getRecentOrders($request);
+    })->name('merchant.api.recent-orders');
 
     Route::post('/merchant/product', function (\Illuminate\Http\Request $request) {
         if (!Auth::check() || Auth::user()->role !== 'merchant') {

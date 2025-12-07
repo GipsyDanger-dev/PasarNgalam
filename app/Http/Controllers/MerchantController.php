@@ -12,6 +12,33 @@ use Illuminate\Support\Facades\Storage;
 
 class MerchantController extends Controller
 {
+    // NEW: API untuk realtime order notifications
+    public function getRecentOrders(Request $request)
+    {
+        $user = Auth::user();
+        $lastCheck = $request->query('last_check', 0);  // timestamp dari client
+
+        $recentOrders = Order::where('merchant_id', $user->id)
+                    ->whereIn('status', ['pending', 'cooking', 'ready'])
+                    ->where('created_at', '>', now()->subMinutes(5))
+                    ->with(['customer', 'driver'])
+                    ->orderBy('created_at', 'desc')
+                    ->get();
+
+        // Hanya return orders yang lebih baru dari last_check
+        $newOrders = $recentOrders->filter(function($order) use ($lastCheck) {
+            return $order->created_at->timestamp > $lastCheck;
+        });
+
+        return response()->json([
+            'has_new' => count($newOrders) > 0,
+            'new_orders' => $newOrders,
+            'all_pending_count' => Order::where('merchant_id', $user->id)
+                                       ->where('status', 'pending')
+                                       ->count()
+        ]);
+    }
+
     public function index() {
         $user = Auth::user();
 

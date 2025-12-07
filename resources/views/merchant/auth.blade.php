@@ -85,23 +85,41 @@
 
             <!-- FORM REGISTER -->
             <div x-show="tab === 'register'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 -translate-x-4" x-transition:enter-end="opacity-100 translate-x-0" style="display: none;">
-                <form action="{{ url('/merchant/dashboard') }}" method="GET" class="space-y-3">
+                <form action="{{ route('register.process') }}" method="POST" class="space-y-3">
+                    @csrf
+                    <input type="hidden" name="role" value="merchant">
+                    <!-- Hidden coordinates to store merchant location -->
+                    <input type="hidden" name="latitude" id="merchant_lat">
+                    <input type="hidden" name="longitude" id="merchant_lng">
+
                     <div>
                         <label class="block text-sm text-gray-400 mb-1">Nama Pemilik</label>
-                        <input type="text" placeholder="Budi Santoso" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-brand-green focus:outline-none transition">
+                        <input type="text" name="name" placeholder="Budi Santoso" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-brand-green focus:outline-none transition" required>
                     </div>
                     <div>
                         <label class="block text-sm text-gray-400 mb-1">Nama Usaha</label>
-                        <input type="tel" placeholder="Ayam Geprek" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-brand-green focus:outline-none transition">
+                        <input type="text" name="store_name" placeholder="Ayam Geprek" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-brand-green focus:outline-none transition" required>
                     </div>
                      <div>
                         <label class="block text-sm text-gray-400 mb-1">Nomor WhatsApp</label>
-                        <input type="tel" placeholder="0812..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-brand-green focus:outline-none transition">
+                        <input type="tel" name="phone" placeholder="0812..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-brand-green focus:outline-none transition" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Email</label>
+                        <input type="email" name="email" placeholder="email@warung.com" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-brand-green focus:outline-none transition" required>
                     </div>
                     <div>
                         <label class="block text-sm text-gray-400 mb-1">Buat Password</label>
-                        <input type="password" placeholder="••••••••" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-brand-green focus:outline-none transition">
+                        <input type="password" name="password" placeholder="••••••••" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-brand-green focus:outline-none transition" required>
                     </div>
+
+                    <!-- MAP FOR MERCHANT LOCATION -->
+                    <div class="mt-3">
+                        <label class="block text-sm text-gray-400 mb-1">Lokasi Warung (Geser Pin)</label>
+                        <div id="merchant-map" style="height:180px;border-radius:0.5rem;border:1px solid rgba(255,255,255,0.06);"></div>
+                        <p class="text-xs text-gray-400 mt-2">Pastikan lokasi akurat agar driver tidak nyasar.</p>
+                    </div>
+
                     <button type="submit" class="w-full bg-brand-green hover:bg-green-600 text-white font-bold py-3 rounded-lg shadow-lg shadow-brand-green/20 transition transform hover:scale-[1.02] mt-2">
                         Daftar Sekarang
                     </button>
@@ -117,3 +135,43 @@
 
 </body>
 </html>
+
+    <script>
+        // Initialize merchant map when present
+        if (document.getElementById('merchant-map')) {
+            // ensure Leaflet is loaded (site already loads it in other pages); if not, this will fail silently
+            try {
+                var mmap = L.map('merchant-map').setView([-7.9826, 112.6308], 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mmap);
+
+                var mmarker = L.marker([-7.9826, 112.6308], { draggable: true }).addTo(mmap);
+
+                function updateMerchantCoords(lat, lng) {
+                    var latInput = document.getElementById('merchant_lat');
+                    var lngInput = document.getElementById('merchant_lng');
+                    if (latInput) latInput.value = lat;
+                    if (lngInput) lngInput.value = lng;
+                }
+
+                // set default
+                updateMerchantCoords(-7.9826, 112.6308);
+
+                mmarker.on('dragend', function() {
+                    var p = mmarker.getLatLng();
+                    updateMerchantCoords(p.lat, p.lng);
+                });
+
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(function(pos) {
+                        mmap.setView([pos.coords.latitude, pos.coords.longitude], 16);
+                        mmarker.setLatLng([pos.coords.latitude, pos.coords.longitude]);
+                        updateMerchantCoords(pos.coords.latitude, pos.coords.longitude);
+                    }, function() {
+                        // ignore
+                    });
+                }
+            } catch (e) {
+                console.warn('Merchant map init error', e);
+            }
+        }
+    </script>

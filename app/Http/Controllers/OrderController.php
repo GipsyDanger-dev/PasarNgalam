@@ -15,9 +15,13 @@ class OrderController extends Controller
         $request->validate([
             'cart_data' => 'required',
             'delivery_address' => 'required',
-            'total_amount' => 'required',
-            'latitude' => 'required|numeric',  // Wajib angka
-            'longitude' => 'required|numeric', // Wajib angka
+            'total_amount' => 'required|numeric',
+            'payment_method' => 'required|in:qris,gopay,bank,cod',
+            // accept both standard names and possible alternative input names from views
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+            'lat_input' => 'nullable|numeric',
+            'lng_input' => 'nullable|numeric',
         ]);
 
         $cart = json_decode($request->cart_data, true);
@@ -33,8 +37,19 @@ class OrderController extends Controller
 
         // 3. AMBIL KOORDINAT ASLI (Tanpa Fallback Default Malang)
         // Agar lokasi pin peta user terbaca akurat
-        $lat = $request->latitude;
-        $lng = $request->longitude;
+        // Determine latitude/longitude from available inputs (fallbacks supported)
+        $lat = $request->input('latitude');
+        $lng = $request->input('longitude');
+        if (empty($lat) || empty($lng)) {
+            // fallback to alternate input ids used in some views
+            $lat = $request->input('lat_input') ?? $lat;
+            $lng = $request->input('lng_input') ?? $lng;
+        }
+
+        // If still missing, abort with validation-like response
+        if ($lat === null || $lng === null) {
+            return back()->with('error', 'Koordinat pengiriman tidak ditemukan. Pastikan Anda memilih lokasi pada peta.');
+        }
 
         // 4. Cari Driver Terdekat (Haversine Formula)
         $assignedDriver = User::select("users.*")
@@ -50,25 +65,35 @@ class OrderController extends Controller
             $assignedDriver = User::where('role', 'driver')->first();
         }
 
-        // 5. Simpan Order & Tangkap Datanya ke variabel $order
+        // 5. Generate Payment Code
+        $paymentCode = 'PAY' . strtoupper(uniqid());
+
+        // 6. Simpan Order dengan payment_status = 'pending'
         $order = Order::create([
-            'customer_id' => Auth::id() ?? 1, // ID 1 jika guest (sebaiknya login)
+            'customer_id' => Auth::id() ?? 1,
             'merchant_id' => $merchantId,
             'driver_id'   => $assignedDriver ? $assignedDriver->id : null,
             'delivery_address' => $request->delivery_address,
-            'dest_latitude' => $lat,  // Simpan Latitude Asli
-            'dest_longitude' => $lng, // Simpan Longitude Asli
+            'dest_latitude' => $lat,
+            'dest_longitude' => $lng,
             'total_price' => $request->total_amount,
             'delivery_fee' => 5000,
-            'status' => 'pending'
+            'status' => 'pending',
+            'payment_method' => $request->payment_method,
+            'payment_status' => 'pending',  
+            'payment_code' => $paymentCode
         ]);
 
-        // 6. Redirect ke Halaman Tracking menggunakan ID order yang baru dibuat
-        if ($assignedDriver) {
-            return redirect()->route('order.track', $order->id)->with('success', 'Order Berhasil! Driver ditemukan.');
-        } else {
-            return redirect()->route('order.track', $order->id)->with('warning', 'Order diterima Resto. Sedang mencari driver...');
+        if ($request->payment_method === 'cod') {
+            $order->update([
+                'payment_status' => 'paid'
+            ]);
+            return redirect()->route('order.track', $order->id)
+                           ->with('success', 'Pesanan berhasil dibuat! Bayar tunai ke kurir saat sampai.');
         }
+
+        return redirect()->route('order.payment', $order->id)
+                       ->with('success', 'Pesanan dibuat. Silakan selesaikan pembayaran.');
     }
 
     public function updateStatus(Request $request, $id)
@@ -85,13 +110,48 @@ class OrderController extends Controller
         return back()->with('success', 'Status pesanan diperbarui!');
     }
 
+    // NEW: Payment Page (Waiting for payment confirmation)
+    public function payment($id)
+    {
+        $order = Order::findOrFail($id);
+
+        if ($order->payment_status === 'paid') {
+            return redirect()->route('order.track', $order->id)
+                           ->with('success', 'Pembayaran sudah dikonfirmasi!');
+        }
+
+        return view('order.payment', compact('order'));
+    }
+
+    // NEW: Confirm Payment (Simple - no gateway integration yet)
+    public function confirmPayment(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+
+        $request->validate([
+            'payment_code_input' => 'required|string',
+        ]);
+
+        // Verifikasi payment code
+        if ($request->payment_code_input !== $order->payment_code) {
+            return back()->with('error', 'Kode pembayaran salah! Periksa kembali.')
+                        ->withInput();
+        }
+
+        // Update payment status menjadi 'paid'
+        $order->update([
+            'payment_status' => 'paid'
+        ]);
+
+        // Redirect ke tracking page
+        return redirect()->route('order.track', $order->id)
+                       ->with('success', 'Pembayaran berhasil dikonfirmasi! 🎉');
+    }
+
     public function track($id)
     {
         $order = Order::with(['merchant', 'driver'])->findOrFail($id);
 
-        // Security: Customer bisa akses order mereka sendiri
-        // Merchant bisa akses order dari resto mereka
-        // Driver bisa akses order yang di-assign ke mereka
         $user = Auth::user();
         if ($user->id !== $order->customer_id && $user->id !== $order->merchant_id && $user->id !== $order->driver_id) {
             return redirect('/')->with('error', 'Anda tidak memiliki akses ke pesanan ini.');

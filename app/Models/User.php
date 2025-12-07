@@ -30,6 +30,9 @@ class User extends Authenticatable
         'profile_picture',
         'address',
         'banner',
+        'latitude',
+        'longitude',
+        'is_online',
     ];
 
 
