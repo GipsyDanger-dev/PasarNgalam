@@ -174,7 +174,7 @@
     <div x-show="showProfileModal" class="fixed inset-0 z-60 overflow-y-auto" x-cloak>
         <div class="fixed inset-0 bg-black/90 backdrop-blur-md" @click="showProfileModal = false"></div>
         <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="glass-panel w-full max-w-md p-8 rounded-3xl shadow-2xl relative">
+            <div class="glass-panel w-full max-w-2xl p-8 rounded-3xl shadow-2xl relative">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-2xl font-bold text-white">Profil Driver</h3>
                     <button @click="showProfileModal = false" class="text-gray-400 hover:text-white bg-gray-800 p-2 rounded-full">
@@ -182,15 +182,37 @@
                     </button>
                 </div>
                 
-                <form action="{{ route('profile.update') }}" method="POST" class="space-y-4">
+                <form action="{{ route('profile.update') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                     @csrf @method('PUT')
+
+                    <!-- Profile Picture Upload -->
+                    <div>
+                        <label class="block text-gray-400 text-xs font-bold uppercase mb-3">Foto Profil</label>
+                        <div class="relative w-32 h-32 mx-auto rounded-2xl overflow-hidden group cursor-pointer border-2 border-dashed border-gray-600 hover:border-brand-green transition bg-[#0B1120]">
+                            <input type="file" name="profile_picture" class="absolute inset-0 opacity-0 cursor-pointer z-10" onchange="previewDriverProfile(this)">
+                            
+                            <div class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 group-hover:text-brand-green transition z-0">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                            </div>
+
+                            <img id="driver-profile-pic-preview" 
+                                 src="{{ $user->profile_picture ? asset('storage/' . $user->profile_picture) : 'https://ui-avatars.com/api/?name='.urlencode($user->name).'&background=00E073&color=000&size=200' }}" 
+                                 class="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:opacity-40 transition">
+                        </div>
+                    </div>
                     
-                    <div><label class="block text-gray-400 text-xs font-bold uppercase mb-1">Nama</label><input type="text" name="name" value="{{ $user->name }}" class="w-full bg-[#0B1120] border border-gray-600 rounded-xl p-3 text-white focus:outline-none focus:border-brand-green"></div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div><label class="block text-brand-green text-xs font-bold uppercase mb-1">Plat Nomor</label><input type="text" name="vehicle_plate" value="{{ $user->vehicle_plate }}" class="w-full bg-[#0B1120] border border-brand-green/50 rounded-xl p-3 text-white focus:outline-none"></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label class="block text-gray-400 text-xs font-bold uppercase mb-1">Nama</label><input type="text" name="name" value="{{ $user->name }}" class="w-full bg-[#0B1120] border border-gray-600 rounded-xl p-3 text-white focus:outline-none focus:border-brand-green"></div>
                         <div><label class="block text-gray-400 text-xs font-bold uppercase mb-1">No. HP</label><input type="text" name="phone" value="{{ $user->phone }}" class="w-full bg-[#0B1120] border border-gray-600 rounded-xl p-3 text-white focus:outline-none"></div>
                     </div>
-                    <div><label class="block text-gray-400 text-xs font-bold uppercase mb-1">Email</label><input type="email" name="email" value="{{ $user->email }}" class="w-full bg-[#0B1120] border border-gray-600 rounded-xl p-3 text-white focus:outline-none"></div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label class="block text-brand-green text-xs font-bold uppercase mb-1">Plat Nomor</label><input type="text" name="vehicle_plate" value="{{ $user->vehicle_plate }}" class="w-full bg-[#0B1120] border border-brand-green/50 rounded-xl p-3 text-white focus:outline-none"></div>
+                        <div><label class="block text-gray-400 text-xs font-bold uppercase mb-1">Email</label><input type="email" name="email" value="{{ $user->email }}" class="w-full bg-[#0B1120] border border-gray-600 rounded-xl p-3 text-white focus:outline-none"></div>
+                    </div>
+
+                    <div><label class="block text-gray-400 text-xs font-bold uppercase mb-1">Alamat</label><textarea name="address" rows="2" class="w-full bg-[#0B1120] border border-gray-600 rounded-xl p-3 text-white focus:outline-none resize-none">{{ $user->address }}</textarea></div>
+                    
                     <div><label class="block text-gray-400 text-xs font-bold uppercase mb-1">Password Baru (Opsional)</label><input type="password" name="password" placeholder="Isi untuk ganti" class="w-full bg-[#0B1120] border border-gray-600 rounded-xl p-3 text-white focus:outline-none"></div>
 
                     <button type="submit" class="w-full bg-brand-green hover:bg-green-400 text-black font-bold py-3.5 rounded-xl shadow-lg mt-2 transition transform hover:scale-[1.02]">Simpan Profil</button>
@@ -203,6 +225,19 @@
             </div>
         </div>
     </div>
+
+    <!-- PROFILE PICTURE PREVIEW SCRIPT -->
+    <script>
+        function previewDriverProfile(input) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('driver-profile-pic-preview').src = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+    </script>
 
     <!-- GPS TRACKER SCRIPT -->
     <script>

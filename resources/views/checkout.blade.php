@@ -133,6 +133,8 @@
             @csrf
             <input type="hidden" name="cart_data" id="cart_json">
             <input type="hidden" name="total_amount" id="total_amount">
+            <input type="hidden" name="latitude" id="lat_input">
+            <input type="hidden" name="longitude" id="lng_input">
 
             <!-- LEFT COLUMN: FORM & PAYMENT -->
             <div class="lg:col-span-2 space-y-6">
@@ -156,6 +158,13 @@
                     <div>
                         <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Alamat Lengkap</label>
                         <textarea name="delivery_address" rows="2" class="form-input" placeholder="Nama jalan, nomor rumah, patokan..." required></textarea>
+                    </div>
+                    
+                    <!-- PETA LOKASI PENGIRIMAN -->
+                    <div class="mt-4">
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Lokasi Pengiriman (Geser Pin)</label>
+                        <div id="map-register" style="height: 200px; width: 100%; border-radius: 0.75rem; z-index: 0; margin-top: 10px; border: 1px solid #475569;"></div>
+                        <p class="text-[10px] text-gray-500 mt-1">*Pastikan lokasi akurat agar driver menemukan alamat dengan mudah.</p>
                     </div>
                 </div>
 
@@ -300,6 +309,83 @@
 
         </form> <!-- END FORM -->
     </div>
+    <!-- SCRIPT LOGIKA PETA (UPDATE INI) -->
+    <script>
+        // 1. Inisialisasi Peta
+        // Default: Alun-alun Malang (Hanya untuk tampilan awal)
+        var map = L.map('map').setView([-7.9826, 112.6308], 15);
 
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // 2. Tambah Marker
+        var marker = L.marker([-7.9826, 112.6308], {
+            draggable: true
+        }).addTo(map);
+
+        // 3. Update Input Hidden saat marker digeser
+        function updateInput(lat, lng) {
+            document.getElementById('lat_input').value = lat;
+            document.getElementById('lng_input').value = lng;
+            console.log("Koordinat tersimpan: " + lat + ", " + lng); // Cek di Console
+        }
+
+        // Listener saat pin digeser manual
+        marker.on('dragend', function(event) {
+            var position = marker.getLatLng();
+            updateInput(position.lat, position.lng);
+        });
+
+        // 4. Geolocation (Lokasi Otomatis)
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    var lat = position.coords.latitude;
+                    var lng = position.coords.longitude;
+
+                    // Pindah peta & marker ke lokasi user
+                    map.setView([lat, lng], 17);
+                    marker.setLatLng([lat, lng]);
+
+                    // PENTING: Simpan ke input hidden
+                    updateInput(lat, lng);
+                }
+                , function(error) {
+                    // Jika GPS mati, pakai default tapi tetap isi input
+                    updateInput(-7.9826, 112.6308);
+                }
+            );
+        } else {
+            // Jika browser tidak support GPS
+            updateInput(-7.9826, 112.6308);
+        }
+
+        // 5. Validasi Tambahan saat tombol Bayar ditekan (AlpineJS Function)
+        // Pastikan kode ini sinkron dengan x-data di atas
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('checkoutData', () => ({
+                // ... (logika lain) ...
+
+                submitOrder() {
+                    // Cek apakah koordinat sudah terisi
+                    var lat = document.getElementById('lat_input').value;
+                    var lng = document.getElementById('lng_input').value;
+
+                    if (!lat || !lng) {
+                        alert("Mohon tunggu sebentar sampai peta memuat lokasi Anda, atau geser pin peta sedikit.");
+                        return;
+                    }
+
+                    this.loading = true;
+                    document.getElementById('cart_json').value = JSON.stringify(this.cart);
+                    document.getElementById('total_amount').value = this.grandTotal;
+                    document.getElementById('checkoutForm').submit();
+                    localStorage.removeItem('pasarNgalamCart');
+                }
+            }))
+        });
+
+    </script>
 </body>
 </html>

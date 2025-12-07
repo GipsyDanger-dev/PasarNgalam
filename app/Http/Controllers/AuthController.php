@@ -41,8 +41,17 @@ class AuthController extends Controller
             'email' => 'required|email|unique:users',
             'password' => 'required|min:6',
             'role' => 'required|in:user,merchant,driver',
-            'phone' => 'required',
+            'phone' => 'required', // WA Wajib
         ]);
+
+        // Validasi Tambahan: Merchant wajib isi lokasi
+        if ($request->role === 'merchant') {
+            $request->validate([
+                'latitude' => 'required',
+                'longitude' => 'required',
+                'store_name' => 'required'
+            ]);
+        }
 
         $user = User::create([
             'name' => $request->name,
@@ -50,9 +59,12 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
             'role' => $request->role,
             'phone' => $request->phone,
-            'store_name' => $request->store_name ?? null,
-            'vehicle_plate' => $request->vehicle_plate ?? null,
-            'vehicle_type' => $request->vehicle_type ?? null,
+            'store_name' => $request->role === 'merchant' ? $request->store_name : null,
+            'vehicle_plate' => $request->role === 'driver' ? $request->vehicle_plate : null,
+            'vehicle_type' => $request->role === 'driver' ? $request->vehicle_type : null,
+            // SIMPAN KOORDINAT (Penting untuk rute!)
+            'latitude' => $request->latitude ?? null,
+            'longitude' => $request->longitude ?? null,
             'is_active' => true,
         ]);
 

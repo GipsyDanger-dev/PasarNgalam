@@ -4,45 +4,71 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PasarNgalam - Kuliner Terbaik Malang</title>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
-    
+
     <!-- Config Warna -->
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        'brand-green': '#00E073',
-                        'brand-dark': '#0F172A',
-                        'brand-card': '#1E293B',
-                    },
-                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                        'brand-green': '#00E073'
+                        , 'brand-dark': '#0F172A'
+                        , 'brand-card': '#1E293B'
+                    , }
+                    , fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    }
                 }
             }
         }
+
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
+
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
         .glass-panel {
             background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        [x-cloak] { display: none !important; }
-        .cart-badge { animation: bounce 0.5s; }
-        @keyframes bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        [x-cloak] {
+            display: none !important;
+        }
+
+        .cart-badge {
+            animation: bounce 0.5s;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+        }
+
     </style>
 </head>
-<body class="bg-brand-dark text-white min-h-screen relative selection:bg-brand-green selection:text-black"
-      x-data="{
+<body class="bg-brand-dark text-white min-h-screen relative selection:bg-brand-green selection:text-black" x-data="{
           showModal: false,
           modalView: 'merchant_detail', 
           
@@ -169,18 +195,18 @@
                         <span class="text-xl font-bold text-white tracking-tight hidden md:block">PasarNgalam</span>
                     </a>
                 </div>
-                
+
                 <div class="hidden md:flex space-x-8 items-center">
                     <a href="#" class="text-white hover:text-brand-green font-medium transition">Beranda</a>
                     <a href="#" class="text-gray-300 hover:text-brand-green font-medium transition">Promo</a>
                     @auth
-                        @if(Auth::user()->role == 'merchant')
-                            <a href="{{ route('merchant.dashboard') }}" class="text-brand-green font-bold border border-brand-green/30 px-4 py-1.5 rounded-full hover:bg-brand-green hover:text-black transition">Dashboard Warung</a>
-                        @elseif(Auth::user()->role == 'driver')
-                            <a href="{{ route('driver.dashboard') }}" class="text-brand-green font-bold border border-brand-green/30 px-4 py-1.5 rounded-full hover:bg-brand-green hover:text-black transition">Panel Driver</a>
-                        @endif
+                    @if(Auth::user()->role == 'merchant')
+                    <a href="{{ route('merchant.dashboard') }}" class="text-brand-green font-bold border border-brand-green/30 px-4 py-1.5 rounded-full hover:bg-brand-green hover:text-black transition">Dashboard Warung</a>
+                    @elseif(Auth::user()->role == 'driver')
+                    <a href="{{ route('driver.dashboard') }}" class="text-brand-green font-bold border border-brand-green/30 px-4 py-1.5 rounded-full hover:bg-brand-green hover:text-black transition">Panel Driver</a>
+                    @endif
                     @else
-                        <a href="{{ route('login') }}" class="text-brand-green font-bold border border-brand-green/30 px-4 py-1.5 rounded-full hover:bg-brand-green hover:text-black transition shadow-[0_0_10px_rgba(0,224,115,0.2)]">Gabung Mitra</a>
+                    <a href="{{ route('login') }}" class="text-brand-green font-bold border border-brand-green/30 px-4 py-1.5 rounded-full hover:bg-brand-green hover:text-black transition shadow-[0_0_10px_rgba(0,224,115,0.2)]">Gabung Mitra</a>
                     @endauth
                 </div>
 
@@ -193,18 +219,36 @@
                     </button>
 
                     @auth
-                        <div class="text-right hidden sm:block mr-2">
-                            <p class="text-xs text-gray-400">Halo,</p>
-                            <p class="text-sm font-bold text-white">{{ Auth::user()->name }}</p>
-                        </div>
-                        <form action="{{ route('logout') }}" method="POST">
-                            @csrf
-                            <button type="submit" class="bg-red-500/20 hover:bg-red-600 text-red-400 hover:text-white p-2.5 rounded-xl transition">
-                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                            </button>
-                        </form>
+                    @php
+                    $activeOrder = \App\Models\Order::where('customer_id', Auth::id())
+                    ->where('status', '!=', 'completed')
+                    ->latest()->first();
+                    @endphp
+
+                    @if($activeOrder)
+                    <a href="{{ route('order.track', $activeOrder->id) }}" class="bg-blue-600/20 text-blue-400 hover:text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 border border-blue-600/30 animate-pulse mr-2">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        Lacak Pesanan
+                    </a>
+                    @endif
+
+                    <div class="text-right hidden sm:block mr-2">
+                        <p class="text-xs text-gray-400">Halo,</p>
+                        <p class="text-sm font-bold text-white">{{ Auth::user()->name }}</p>
+                    </div>
+                    <a href="{{ route('profile.show') }}" class="bg-gray-700 hover:bg-gray-600 text-white p-2.5 rounded-xl transition border border-gray-600" title="Profil">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                    </a>
+                    <form action="{{ route('logout') }}" method="POST">
+                        @csrf
+                        <button type="submit" class="bg-red-500/20 hover:bg-red-600 text-red-400 hover:text-white p-2.5 rounded-xl transition">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                        </button>
+                    </form>
                     @else
-                        <a href="{{ route('login') }}" class="bg-brand-card hover:bg-gray-700 text-white border border-gray-600 px-5 py-2.5 rounded-xl font-bold text-sm transition hidden sm:block">Masuk</a>
+                    <a href="{{ route('login') }}" class="bg-brand-card hover:bg-gray-700 text-white border border-gray-600 px-5 py-2.5 rounded-xl font-bold text-sm transition hidden sm:block">Masuk</a>
                     @endauth
                 </div>
             </div>
@@ -230,51 +274,51 @@
     <!-- CONTENT GRID -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 relative z-20 pb-20">
         @if($merchants->count() > 0)
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                @foreach($merchants as $merchant)
-                    @php
-                        $merchantData = [
-                            'name' => $merchant->store_name ?? $merchant->name,
-                            'category' => 'Aneka Kuliner',
-                            'rating' => '4.8',
-                            'img' => 'https://ui-avatars.com/api/?name='.urlencode($merchant->store_name).'&background=random&size=400&bold=true', 
-                            'menus' => $merchant->products->map(function($p) use ($merchant) {
-                                return [
-                                    'id' => $p->id,
-                                    'merchant_id' => $merchant->id,
-                                    'name' => $p->name,
-                                    'price' => $p->price,
-                                    'desc' => $p->description,
-                                    'img' => $p->image ? asset('storage/' . $p->image) : 'https://placehold.co/400x300?text=No+Image'
-                                ];
-                            })->values()->toArray()
-                        ];
-                    @endphp
-                    <div @click="openMerchantModal({{ json_encode($merchantData) }})" class="glass-panel rounded-3xl overflow-hidden hover:border-brand-green/50 transition duration-300 group cursor-pointer relative">
-                        <div class="relative h-48 overflow-hidden bg-gray-800">
-                            <img src="{{ $merchantData['img'] }}" class="w-full h-full object-cover group-hover:scale-110 transition duration-700">
-                            <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition"></div>
-                            <div class="absolute top-4 right-4 bg-brand-green text-black text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">Buka</div>
-                        </div>
-                        <div class="p-6">
-                            <div class="flex justify-between items-start mb-2">
-                                <h3 class="text-xl font-bold text-white truncate group-hover:text-brand-green transition">{{ $merchantData['name'] }}</h3>
-                                <div class="flex items-center gap-1 bg-yellow-500/10 px-2 py-1 rounded-lg border border-yellow-500/20">
-                                    <span class="font-bold text-yellow-500 text-sm">★ {{ $merchantData['rating'] }}</span>
-                                </div>
-                            </div>
-                            <p class="text-gray-400 text-sm mb-4 truncate">{{ $merchantData['category'] }} • {{ count($merchantData['menus']) }} Menu</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            @foreach($merchants as $merchant)
+            @php
+            $merchantData = [
+            'name' => $merchant->store_name ?? $merchant->name,
+            'category' => 'Aneka Kuliner',
+            'rating' => '4.8',
+            'img' => 'https://ui-avatars.com/api/?name='.urlencode($merchant->store_name).'&background=random&size=400&bold=true',
+            'menus' => $merchant->products->map(function($p) use ($merchant) {
+            return [
+            'id' => $p->id,
+            'merchant_id' => $merchant->id,
+            'name' => $p->name,
+            'price' => $p->price,
+            'desc' => $p->description,
+            'img' => $p->image ? asset('storage/' . $p->image) : 'https://placehold.co/400x300?text=No+Image'
+            ];
+            })->values()->toArray()
+            ];
+            @endphp
+            <div @click="openMerchantModal({{ json_encode($merchantData) }})" class="glass-panel rounded-3xl overflow-hidden hover:border-brand-green/50 transition duration-300 group cursor-pointer relative">
+                <div class="relative h-48 overflow-hidden bg-gray-800">
+                    <img src="{{ $merchantData['img'] }}" class="w-full h-full object-cover group-hover:scale-110 transition duration-700">
+                    <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition"></div>
+                    <div class="absolute top-4 right-4 bg-brand-green text-black text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">Buka</div>
+                </div>
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-xl font-bold text-white truncate group-hover:text-brand-green transition">{{ $merchantData['name'] }}</h3>
+                        <div class="flex items-center gap-1 bg-yellow-500/10 px-2 py-1 rounded-lg border border-yellow-500/20">
+                            <span class="font-bold text-yellow-500 text-sm">★ {{ $merchantData['rating'] }}</span>
                         </div>
                     </div>
-                @endforeach
+                    <p class="text-gray-400 text-sm mb-4 truncate">{{ $merchantData['category'] }} • {{ count($merchantData['menus']) }} Menu</p>
+                </div>
             </div>
+            @endforeach
+        </div>
         @else
-            <div class="text-center py-20 glass-panel rounded-3xl">
-                <div class="text-6xl mb-4">🏪</div>
-                <h2 class="text-2xl font-bold text-white mb-2">Belum Ada Warung Buka</h2>
-                <p class="text-gray-400">Jadilah mitra pertama kami!</p>
-                <a href="{{ route('login') }}" class="inline-block mt-4 text-brand-green font-bold hover:underline">Daftar Sekarang &rarr;</a>
-            </div>
+        <div class="text-center py-20 glass-panel rounded-3xl">
+            <div class="text-6xl mb-4">🏪</div>
+            <h2 class="text-2xl font-bold text-white mb-2">Belum Ada Warung Buka</h2>
+            <p class="text-gray-400">Jadilah mitra pertama kami!</p>
+            <a href="{{ route('login') }}" class="inline-block mt-4 text-brand-green font-bold hover:underline">Daftar Sekarang &rarr;</a>
+        </div>
         @endif
     </div>
 
@@ -283,7 +327,7 @@
         <div x-show="showModal" x-transition.opacity @click="showModal = false" class="fixed inset-0 bg-black/80 backdrop-blur-sm"></div>
         <div x-show="showModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-90" x-transition:enter-end="opacity-100 scale-100" class="flex items-center justify-center min-h-screen p-4">
             <div class="bg-[#1E293B] border border-gray-700 w-full max-w-lg rounded-3xl shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]">
-                
+
                 <!-- HEADER MODAL -->
                 <div class="p-6 border-b border-gray-700 flex justify-between items-center bg-[#0F172A]">
                     <h3 class="text-xl font-bold text-white">
@@ -291,12 +335,13 @@
                         <span x-show="modalView === 'menu_customization'">Pesan Menu</span>
                         <span x-show="modalView === 'cart_detail'">Keranjang Saya</span>
                     </h3>
-                    <button @click="showModal = false" class="text-gray-400 hover:text-white bg-gray-800 p-2 rounded-full"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                    <button @click="showModal = false" class="text-gray-400 hover:text-white bg-gray-800 p-2 rounded-full"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
                 </div>
 
                 <!-- BODY -->
                 <div class="overflow-y-auto p-6 flex-1 no-scrollbar">
-                    
+
                     <!-- VIEW 1: MERCHANT DETAIL -->
                     <div x-show="modalView === 'merchant_detail'">
                         <img :src="selectedMerchant.img" class="w-full h-48 object-cover rounded-2xl mb-6 border border-gray-600 bg-gray-800">

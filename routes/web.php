@@ -27,30 +27,28 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 
 // --- CUSTOMER CHECKOUT ---
-// 1. Halaman Form Checkout (INI YANG TADI ERROR)
 Route::get('/checkout', function () {
     return view('checkout');
 })->name('checkout'); 
 
-// 2. Proses Checkout (Masuk ke OrderController)
+// Proses Checkout (Masuk ke OrderController)
 Route::post('/checkout-process', [OrderController::class, 'checkout'])->name('checkout.process');
 
+Route::get('/order/track/{id}', [OrderController::class, 'track'])->name('order.track');
 
-// --- MERCHANT AREA (Wajib Login sebagai Merchant) ---
+// MERCHANT AREA (Wajib Login sebagai Merchant)
 Route::middleware(['auth'])->group(function () {
-    
-    // Dashboard & Produk
+
     Route::get('/merchant/dashboard', [MerchantController::class, 'index'])->name('merchant.dashboard');
     Route::post('/merchant/product', [MerchantController::class, 'storeProduct'])->name('merchant.product.store');
     Route::put('/merchant/product/{id}', [MerchantController::class, 'updateProduct'])->name('merchant.product.update');
     Route::delete('/merchant/product/{id}', [MerchantController::class, 'deleteProduct'])->name('merchant.product.delete');
 
-    // Update Status Order (Masak / Siap)
     Route::put('/merchant/order/{id}/update', [OrderController::class, 'updateStatus'])->name('merchant.order.update');
 });
 
 
-// --- DRIVER AREA (Wajib Login sebagai Driver) ---
+//  DRIVER AREA (Wajib Login sebagai Driver) 
 Route::middleware(['auth'])->group(function () {
     
     Route::get('/driver/dashboard', [DriverController::class, 'index'])->name('driver.dashboard');
@@ -62,7 +60,8 @@ Route::middleware(['auth'])->group(function () {
 });
 
 
-// --- GLOBAL PROFILE UPDATE (Bisa diakses Merchant & Driver) ---
+//  GLOBAL PROFILE UPDATE (Bisa diakses Merchant & Driver & Customer) 
 Route::middleware(['auth'])->group(function () {
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
     Route::put('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
 });

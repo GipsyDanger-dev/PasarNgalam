@@ -26,7 +26,10 @@ class User extends Authenticatable
         'store_name',
         'vehicle_plate',
         'vehicle_type',
-        'is_active'
+        'is_active',
+        'profile_picture',
+        'address',
+        'banner',
     ];
 
 

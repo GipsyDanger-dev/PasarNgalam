@@ -64,27 +64,48 @@
                      class="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-20 transition">
             </div>
 
-            <!-- Input Fields -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-gray-400 text-xs uppercase font-bold mb-2">Nama Pemilik</label>
-                    <input type="text" name="name" value="{{ old('name', $user->name) }}" 
-                        class="bg-[#0B1120] border border-[#334155] text-white text-sm rounded-lg focus:ring-1 focus:ring-[#00E073] focus:border-[#00E073] block w-full p-3">
+            <!-- Profile Picture Upload Area -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="md:col-span-1">
+                    <label class="block text-gray-400 text-xs uppercase font-bold mb-3">Foto Profil</label>
+                    <div class="relative w-full aspect-square rounded-2xl overflow-hidden group cursor-pointer border-2 border-dashed border-gray-600 hover:border-[#00E073] transition bg-[#0B1120]">
+                        <input type="file" name="profile_picture" class="absolute inset-0 opacity-0 cursor-pointer z-10" onchange="previewProfilePicture(this)">
+                        
+                        <div class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 group-hover:text-[#00E073] transition z-0">
+                            <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                            <span class="text-xs font-medium text-center">Ganti Foto</span>
+                        </div>
+
+                        <img id="profile-picture-preview" 
+                             src="{{ $user->profile_picture ? asset('storage/' . $user->profile_picture) : 'https://ui-avatars.com/api/?name='.urlencode($user->name).'&background=00E073&color=000&size=400' }}" 
+                             class="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:opacity-40 transition">
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-gray-400 text-xs uppercase font-bold mb-2">Email Login</label>
-                    <input type="email" name="email" value="{{ old('email', $user->email) }}" 
-                        class="bg-[#0B1120] border border-[#334155] text-white text-sm rounded-lg focus:ring-1 focus:ring-[#00E073] focus:border-[#00E073] block w-full p-3">
-                </div>
-                <div>
-                    <label class="block text-[#00E073] text-xs uppercase font-bold mb-2">Nama Warung</label>
-                    <input type="text" name="store_name" value="{{ old('store_name', $user->store_name) }}" 
-                        class="bg-[#0B1120] border border-[#00E073]/50 text-white text-sm rounded-lg focus:ring-1 focus:ring-[#00E073] focus:border-[#00E073] block w-full p-3">
-                </div>
-                <div>
-                    <label class="block text-gray-400 text-xs uppercase font-bold mb-2">WhatsApp</label>
-                    <input type="text" name="phone" value="{{ old('phone', $user->phone) }}" 
-                        class="bg-[#0B1120] border border-[#334155] text-white text-sm rounded-lg focus:ring-1 focus:ring-[#00E073] focus:border-[#00E073] block w-full p-3">
+
+                <!-- Input Fields -->
+                <div class="md:col-span-2 grid gap-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-gray-400 text-xs uppercase font-bold mb-2">Nama Pemilik</label>
+                            <input type="text" name="name" value="{{ old('name', $user->name) }}" 
+                                class="bg-[#0B1120] border border-[#334155] text-white text-sm rounded-lg focus:ring-1 focus:ring-[#00E073] focus:border-[#00E073] block w-full p-3">
+                        </div>
+                        <div>
+                            <label class="block text-gray-400 text-xs uppercase font-bold mb-2">Email Login</label>
+                            <input type="email" name="email" value="{{ old('email', $user->email) }}" 
+                                class="bg-[#0B1120] border border-[#334155] text-white text-sm rounded-lg focus:ring-1 focus:ring-[#00E073] focus:border-[#00E073] block w-full p-3">
+                        </div>
+                        <div>
+                            <label class="block text-[#00E073] text-xs uppercase font-bold mb-2">Nama Warung</label>
+                            <input type="text" name="store_name" value="{{ old('store_name', $user->store_name) }}" 
+                                class="bg-[#0B1120] border border-[#00E073]/50 text-white text-sm rounded-lg focus:ring-1 focus:ring-[#00E073] focus:border-[#00E073] block w-full p-3">
+                        </div>
+                        <div>
+                            <label class="block text-gray-400 text-xs uppercase font-bold mb-2">WhatsApp</label>
+                            <input type="text" name="phone" value="{{ old('phone', $user->phone) }}" 
+                                class="bg-[#0B1120] border border-[#334155] text-white text-sm rounded-lg focus:ring-1 focus:ring-[#00E073] focus:border-[#00E073] block w-full p-3">
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -105,13 +126,23 @@
     </div>
 </div>
 
-<!-- Script Kecil untuk Preview Banner saat upload -->
+<!-- Script Kecil untuk Preview Banner & Profile Picture saat upload -->
 <script>
     function previewBanner(input) {
         if (input.files && input.files[0]) {
             var reader = new FileReader();
             reader.onload = function(e) {
                 document.getElementById('banner-preview').src = e.target.result;
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function previewProfilePicture(input) {
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('profile-picture-preview').src = e.target.result;
             }
             reader.readAsDataURL(input.files[0]);
         }
