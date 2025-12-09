@@ -3,7 +3,7 @@
     <div class="bg-[#0B1120] rounded-2xl w-full max-w-2xl border border-[#1E293B] shadow-2xl relative flex flex-col max-h-[90vh]" @click.away="showModal = false">
         
         <!-- 1. Header Modal -->
-        <div class="px-6 py-5 border-b border-[#1E293B] flex justify-between items-start">
+        <div class="px-6 py-5 border-b border-[#1E293B] flex justify-between items-start bg-[#0F172A] rounded-t-2xl">
             <div>
                 <h3 class="text-xl font-bold text-white" x-text="modalMode === 'edit' ? 'Edit Menu' : 'Tambah Menu'"></h3>
                 <p class="text-xs text-gray-400 mt-1">Lengkapi informasi menu dengan detail.</p>
@@ -52,7 +52,7 @@
                 <div class="space-y-4">
                     <label class="text-[#00E073] text-[10px] font-bold uppercase tracking-wider block mb-1">Informasi Dasar</label>
                     
-                    <input type="text" name="name" x-model="formData.name" placeholder="Nama Menu (Contoh: Paket Nasi Empal)" 
+                    <input type="text" name="name" x-model="formData.name" placeholder="Nama Menu (Contoh: Paket Nasi Empal)" required 
                         class="bg-[#151F32] border border-[#334155] text-white text-sm rounded-lg focus:ring-1 focus:ring-[#00E073] focus:border-[#00E073] block w-full p-3 placeholder-gray-500">
                     
                     <textarea name="description" x-model="formData.description" rows="3" placeholder="Deskripsi menu..." 
@@ -63,7 +63,7 @@
                 <div class="grid grid-cols-2 gap-5 mt-4">
                     <div>
                         <label class="text-xs text-gray-300 block mb-2">Harga (Rp)</label>
-                        <input type="number" name="price" x-model="formData.price" placeholder="35000" 
+                        <input type="number" name="price" x-model="formData.price" placeholder="35000" required 
                             class="bg-[#151F32] border border-[#334155] text-white text-sm rounded-lg focus:ring-1 focus:ring-[#00E073] focus:border-[#00E073] block w-full p-3 placeholder-gray-500">
                     </div>
                     <div>
@@ -80,6 +80,15 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- AVAILABILITY SWITCH -->
+                <div class="mt-4 bg-[#151F32] p-3 rounded-lg border border-[#334155] flex items-center justify-between">
+                    <span class="text-sm text-gray-300">Status Menu (Tersedia / Habis)</span>
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" name="is_available" class="sr-only peer" x-model="formData.is_available">
+                        <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00E073] relative"></div>
+                    </label>
                 </div>
 
                 <!-- SECTION: VARIAN / ADD-ON -->
@@ -119,6 +128,10 @@
                         
                         <!-- Input Hidden untuk mengirim data addon ke backend sebagai JSON -->
                         <input type="hidden" name="addons" :value="JSON.stringify(formData.addons)">
+                        
+                        <template x-if="formData.addons.length === 0">
+                            <p class="text-xs text-gray-500 text-center italic py-2">Belum ada varian tambahan.</p>
+                        </template>
                     </div>
                     <p class="text-[10px] text-gray-500 mt-3 ml-1">*Isi harga 0 jika varian gratis.</p>
                 </div>

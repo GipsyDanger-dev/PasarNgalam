@@ -13,12 +13,18 @@ return new class extends Migration
     {
         Schema::create('products', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('merchant_id')->constrained('users')->onDelete('cascade'); // Punya siapa?
+            $table->foreignId('merchant_id')->constrained('users')->onDelete('cascade');
             $table->string('name');
             $table->decimal('price', 10, 2);
             $table->text('description')->nullable();
-            $table->string('image')->nullable(); // Foto makanan
+            $table->string('image')->nullable();
             $table->boolean('is_available')->default(true);
+            
+            // --- TAMBAHAN BARU ---
+            $table->string('category')->default('Makanan Berat'); // Kolom Kategori
+            $table->json('addons')->nullable(); // Kolom Addons (JSON)
+            // ---------------------
+
             $table->timestamps();
         });
     }

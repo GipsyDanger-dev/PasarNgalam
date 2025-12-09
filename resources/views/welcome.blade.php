@@ -16,56 +16,31 @@
             theme: {
                 extend: {
                     colors: {
-                        'brand-green': '#00E073'
-                        , 'brand-dark': '#0F172A'
-                        , 'brand-card': '#1E293B'
-                    , }
-                    , fontFamily: {
+                        'brand-green': '#00E073',
+                        'brand-dark': '#0F172A',
+                        'brand-card': '#1E293B',
+                    },
+                    fontFamily: {
                         sans: ['Inter', 'sans-serif']
                     }
                 }
             }
         }
-
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-
+        body { font-family: 'Inter', sans-serif; }
         .glass-panel {
             background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
-
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-
-        [x-cloak] {
-            display: none !important;
-        }
-
-        .cart-badge {
-            animation: bounce 0.5s;
-        }
-
-        @keyframes bounce {
-
-            0%,
-            100% {
-                transform: scale(1);
-            }
-
-            50% {
-                transform: scale(1.2);
-            }
-        }
-
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        [x-cloak] { display: none !important; }
+        .cart-badge { animation: bounce 0.5s; }
+        @keyframes bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
     </style>
 </head>
 <body class="bg-brand-dark text-white min-h-screen relative selection:bg-brand-green selection:text-black" x-data="{
@@ -77,19 +52,17 @@
           cart: [],
           
           qty: 1,
-          selectedAddons: [], // Menyimpan addon yang dipilih user
+          selectedAddons: [], 
           note: '',
 
           formatRupiah(number) {
               return new Intl.NumberFormat('id-ID').format(number);
           },
 
-          // Hitung Total (Harga Menu + Total Addons) * Qty
           get currentItemTotal() {
               if(!this.selectedMenu.price) return 0;
-              // Hitung total harga addon yang dipilih
-              let addonTotal = this.selectedAddons.reduce((sum, item) => sum + item.price, 0);
-              return (this.selectedMenu.price + addonTotal) * this.qty;
+              let addonTotal = this.selectedAddons.reduce((sum, item) => sum + parseInt(item.price), 0);
+              return (parseInt(this.selectedMenu.price) + addonTotal) * this.qty;
           },
 
           get grandTotal() {
@@ -107,18 +80,22 @@
           },
 
           openMenuCustomization(menu) {
+              let dynamicAddons = [];
+              if (menu.addons) {
+                   if (Array.isArray(menu.addons)) {
+                       dynamicAddons = menu.addons;
+                   } else if (typeof menu.addons === 'string') {
+                       try { dynamicAddons = JSON.parse(menu.addons); } catch (e) { dynamicAddons = []; }
+                   }
+              }
+
               this.selectedMenu = {
                   ...menu,
-                  // Simulasi Addons (Nanti bisa diambil dari DB jika sudah ada tabelnya)
-                  addons_available: [
-                      { name: 'Extra Pedas', price: 0 },
-                      { name: 'Tambah Nasi', price: 4000 },
-                      { name: 'Tambah Telur', price: 3000 },
-                      { name: 'Kerupuk', price: 2000 }
-                  ]
+                  addons_available: dynamicAddons
               };
+              
               this.qty = 1;
-              this.selectedAddons = []; // Reset pilihan addon
+              this.selectedAddons = []; 
               this.note = '';
               this.modalView = 'menu_customization';
           },
@@ -132,7 +109,7 @@
                   img: this.selectedMenu.img,
                   price: this.selectedMenu.price,
                   qty: this.qty,
-                  addons: this.selectedAddons, // Simpan addon ke cart
+                  addons: JSON.parse(JSON.stringify(this.selectedAddons)), 
                   note: this.note,
                   total: this.currentItemTotal
               };
@@ -154,7 +131,7 @@
 
           processCheckout() {
               if (this.cart.length === 0) {
-                  alert('Keranjang kosong! Pilih menu dulu.');
+                  alert('Keranjang kosong!');
                   return;
               }
               window.location.href = '{{ route('checkout') }}';
@@ -162,14 +139,12 @@
 
           backToMerchant() { this.modalView = 'merchant_detail'; },
           
-          // Logic Checkbox Addon
           toggleAddon(addon) {
-              // Cek apakah addon sudah ada di array selectedAddons
               const index = this.selectedAddons.findIndex(a => a.name === addon.name);
               if (index === -1) {
-                  this.selectedAddons.push(addon); // Kalau belum, masukkan
+                  this.selectedAddons.push(addon); 
               } else {
-                  this.selectedAddons.splice(index, 1); // Kalau sudah, hapus (uncheck)
+                  this.selectedAddons.splice(index, 1); 
               }
           },
           
@@ -200,13 +175,13 @@
                     <a href="#" class="text-white hover:text-brand-green font-medium transition">Beranda</a>
                     <a href="#" class="text-gray-300 hover:text-brand-green font-medium transition">Promo</a>
                     @auth
-                    @if(Auth::user()->role == 'merchant')
-                    <a href="{{ route('merchant.dashboard') }}" class="text-brand-green font-bold border border-brand-green/30 px-4 py-1.5 rounded-full hover:bg-brand-green hover:text-black transition">Dashboard Warung</a>
-                    @elseif(Auth::user()->role == 'driver')
-                    <a href="{{ route('driver.dashboard') }}" class="text-brand-green font-bold border border-brand-green/30 px-4 py-1.5 rounded-full hover:bg-brand-green hover:text-black transition">Panel Driver</a>
-                    @endif
+                        @if(Auth::user()->role == 'merchant')
+                        <a href="{{ route('merchant.dashboard') }}" class="text-brand-green font-bold border border-brand-green/30 px-4 py-1.5 rounded-full hover:bg-brand-green hover:text-black transition">Dashboard Warung</a>
+                        @elseif(Auth::user()->role == 'driver')
+                        <a href="{{ route('driver.dashboard') }}" class="text-brand-green font-bold border border-brand-green/30 px-4 py-1.5 rounded-full hover:bg-brand-green hover:text-black transition">Panel Driver</a>
+                        @endif
                     @else
-                    <a href="{{ route('login') }}" class="text-brand-green font-bold border border-brand-green/30 px-4 py-1.5 rounded-full hover:bg-brand-green hover:text-black transition shadow-[0_0_10px_rgba(0,224,115,0.2)]">Gabung Mitra</a>
+                        <a href="{{ route('login') }}" class="text-brand-green font-bold border border-brand-green/30 px-4 py-1.5 rounded-full hover:bg-brand-green hover:text-black transition shadow-[0_0_10px_rgba(0,224,115,0.2)]">Gabung Mitra</a>
                     @endauth
                 </div>
 
@@ -219,36 +194,37 @@
                     </button>
 
                     @auth
-                    @php
-                    $activeOrder = \App\Models\Order::where('customer_id', Auth::id())
-                    ->where('status', '!=', 'completed')
-                    ->latest()->first();
-                    @endphp
+                        @php
+                        $activeOrder = \App\Models\Order::where('customer_id', Auth::id())
+                        ->where('status', '!=', 'completed')
+                        ->latest()->first();
+                        @endphp
 
-                    @if($activeOrder)
-                    <a href="{{ route('order.track', $activeOrder->id) }}" class="bg-blue-600/20 text-blue-400 hover:text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 border border-blue-600/30 animate-pulse mr-2">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        Lacak Pesanan
-                    </a>
-                    @endif
+                        @if($activeOrder)
+                        <a href="{{ route('order.track', $activeOrder->id) }}" class="bg-blue-600/20 text-blue-400 hover:text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 border border-blue-600/30 animate-pulse mr-2 hidden sm:flex">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            Lacak
+                        </a>
+                        @endif
 
-                    <div class="text-right hidden sm:block mr-2">
-                        <p class="text-xs text-gray-400">Halo,</p>
-                        <p class="text-sm font-bold text-white">{{ Auth::user()->name }}</p>
-                    </div>
-                    <a href="{{ route('profile.show') }}" class="bg-gray-700 hover:bg-gray-600 text-white p-2.5 rounded-xl transition border border-gray-600" title="Profil">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                    </a>
-                    <form action="{{ route('logout') }}" method="POST">
-                        @csrf
-                        <button type="submit" class="bg-red-500/20 hover:bg-red-600 text-red-400 hover:text-white p-2.5 rounded-xl transition">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                        </button>
-                    </form>
+                        <div class="text-right hidden sm:block mr-2">
+                            <p class="text-xs text-gray-400">Halo,</p>
+                            <p class="text-sm font-bold text-white">{{ Auth::user()->name }}</p>
+                        </div>
+                        
+                        <a href="{{ route('profile.show') }}" class="bg-gray-700 hover:bg-gray-600 text-white p-2.5 rounded-xl transition border border-gray-600" title="Profil">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                        </a>
+
+                        <form action="{{ route('logout') }}" method="POST">
+                            @csrf
+                            <button type="submit" class="bg-red-500/20 hover:bg-red-600 text-red-400 hover:text-white p-2.5 rounded-xl transition">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                            </button>
+                        </form>
                     @else
-                    <a href="{{ route('login') }}" class="bg-brand-card hover:bg-gray-700 text-white border border-gray-600 px-5 py-2.5 rounded-xl font-bold text-sm transition hidden sm:block">Masuk</a>
+                        <a href="{{ route('login') }}" class="bg-brand-card hover:bg-gray-700 text-white border border-gray-600 px-5 py-2.5 rounded-xl font-bold text-sm transition hidden sm:block">Masuk</a>
                     @endauth
                 </div>
             </div>
@@ -264,6 +240,7 @@
         <div class="relative z-10 text-center px-4 w-full max-w-4xl">
             <h1 class="text-5xl md:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-brand-green to-teal-400 mb-6 drop-shadow-2xl">Kuliner Ngalam</h1>
             <p class="text-xl text-gray-200 mb-10 font-light max-w-2xl mx-auto">Temukan cita rasa legendaris dan dukung UMKM lokal langsung dari smartphone Anda.</p>
+            
             <div class="relative max-w-xl mx-auto">
                 <input type="text" class="block w-full pl-8 pr-24 py-5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-green shadow-2xl transition" placeholder="Cari Toko atau Warung...">
                 <button class="absolute right-2 top-2 bottom-2 bg-brand-green hover:bg-green-400 text-black px-8 rounded-full font-bold transition">Cari</button>
@@ -272,52 +249,107 @@
     </div>
 
     <!-- CONTENT GRID -->
+   <!-- CONTENT GRID -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 relative z-20 pb-20">
         @if($merchants->count() > 0)
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             @foreach($merchants as $merchant)
             @php
-            $merchantData = [
-            'name' => $merchant->store_name ?? $merchant->name,
-            'category' => 'Aneka Kuliner',
-            'rating' => '4.8',
-            'img' => 'https://ui-avatars.com/api/?name='.urlencode($merchant->store_name).'&background=random&size=400&bold=true',
-            'menus' => $merchant->products->map(function($p) use ($merchant) {
-            return [
-            'id' => $p->id,
-            'merchant_id' => $merchant->id,
-            'name' => $p->name,
-            'price' => $p->price,
-            'desc' => $p->description,
-            'img' => $p->image ? asset('storage/' . $p->image) : 'https://placehold.co/400x300?text=No+Image'
-            ];
-            })->values()->toArray()
-            ];
+                // 1. LOGIKA MENU (Tetap sama)
+                $menusData = $merchant->products->map(function($p) use ($merchant) {
+                    $addons = [];
+                    if (!empty($p->addons)) {
+                        if (is_array($p->addons)) {
+                            $addons = $p->addons;
+                        } elseif (is_string($p->addons)) {
+                            $decoded = json_decode($p->addons, true);
+                            if (json_last_error() === JSON_ERROR_NONE) {
+                                $addons = $decoded;
+                            }
+                        }
+                    }
+
+                    $imageUrl = !empty($p->image) 
+                        ? asset('storage/' . $p->image) 
+                        : 'https://placehold.co/400x300?text=No+Image';
+
+                    return [
+                        'id' => $p->id,
+                        'merchant_id' => $merchant->id,
+                        'name' => $p->name,
+                        'price' => $p->price,
+                        'desc' => $p->description,
+                        'img' => $imageUrl, 
+                        'addons' => $addons
+                    ];
+                })->values()->toArray();
+
+                // 2. LOGIKA BANNER TOKO (PERBAIKAN DISINI)
+                // Cek kolom 'banner' DULU, jika kosong cek 'store_banner'
+                $bannerPath = $merchant->banner ?? $merchant->store_banner;
+
+                if (!empty($bannerPath)) {
+                    // Jika ada file banner di database, pakai itu
+                    $merchantImg = asset('storage/' . $bannerPath);
+                } else {
+                    // Jika TIDAK ADA, pakai inisial nama toko (Fallback)
+                    $merchantImg = 'https://ui-avatars.com/api/?name='.urlencode($merchant->store_name).'&background=00E073&color=000&size=400&bold=true&font-size=0.33';
+                }
+
+                // Susun Data Merchant Final
+                $merchantData = [
+                    'name' => $merchant->store_name ?? $merchant->name,
+                    'category' => 'Aneka Kuliner',
+                    'rating' => '4.8',
+                    'img' => $merchantImg, 
+                    'menus' => $menusData
+                ];
             @endphp
-            <div @click="openMerchantModal({{ json_encode($merchantData) }})" class="glass-panel rounded-3xl overflow-hidden hover:border-brand-green/50 transition duration-300 group cursor-pointer relative">
+
+            <!-- CARD MERCHANT -->
+            <div @click="openMerchantModal({{ json_encode($merchantData) }})" class="glass-panel rounded-3xl overflow-hidden hover:border-brand-green/50 transition duration-300 group cursor-pointer relative shadow-lg hover:shadow-brand-green/20">
                 <div class="relative h-48 overflow-hidden bg-gray-800">
-                    <img src="{{ $merchantData['img'] }}" class="w-full h-full object-cover group-hover:scale-110 transition duration-700">
-                    <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition"></div>
-                    <div class="absolute top-4 right-4 bg-brand-green text-black text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">Buka</div>
+                    <!-- FOTO BANNER -->
+                    <img src="{{ $merchantData['img'] }}" 
+                         class="w-full h-full object-cover group-hover:scale-110 transition duration-700"
+                         onerror="this.onerror=null; this.src='https://placehold.co/600x400?text=No+Image';">
+                    
+                    <!-- Overlay Gelap (Agar tulisan terbaca jika gambar terang) -->
+                    <div class="absolute inset-0 bg-gradient-to-t from-brand-dark/90 via-transparent to-transparent"></div>
+                    
+                    <!-- Badge Status Buka -->
+                    <div class="absolute top-4 right-4 bg-brand-green text-black text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
+                        <span class="w-2 h-2 bg-black rounded-full animate-pulse"></span> Buka
+                    </div>
                 </div>
-                <div class="p-6">
+                
+                <div class="p-6 relative">
+                    <!-- Judul Toko -->
                     <div class="flex justify-between items-start mb-2">
-                        <h3 class="text-xl font-bold text-white truncate group-hover:text-brand-green transition">{{ $merchantData['name'] }}</h3>
-                        <div class="flex items-center gap-1 bg-yellow-500/10 px-2 py-1 rounded-lg border border-yellow-500/20">
+                        <h3 class="text-xl font-bold text-white truncate group-hover:text-brand-green transition pr-4">
+                            {{ $merchantData['name'] }}
+                        </h3>
+                        <div class="flex items-center gap-1 bg-yellow-500/10 px-2 py-1 rounded-lg border border-yellow-500/20 shrink-0">
                             <span class="font-bold text-yellow-500 text-sm">★ {{ $merchantData['rating'] }}</span>
                         </div>
                     </div>
-                    <p class="text-gray-400 text-sm mb-4 truncate">{{ $merchantData['category'] }} • {{ count($merchantData['menus']) }} Menu</p>
+                    
+                    <!-- Info Tambahan -->
+                    <p class="text-gray-400 text-sm mb-4 truncate flex items-center gap-2">
+                        <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        {{ $merchantData['category'] }} • {{ count($merchantData['menus']) }} Menu
+                    </p>
                 </div>
             </div>
             @endforeach
         </div>
         @else
-        <div class="text-center py-20 glass-panel rounded-3xl">
-            <div class="text-6xl mb-4">🏪</div>
+        <!-- Tampilan Jika Belum Ada Warung -->
+        <div class="text-center py-20 glass-panel rounded-3xl border border-dashed border-gray-700">
+            <div class="text-6xl mb-4 grayscale opacity-50">🏪</div>
             <h2 class="text-2xl font-bold text-white mb-2">Belum Ada Warung Buka</h2>
-            <p class="text-gray-400">Jadilah mitra pertama kami!</p>
-            <a href="{{ route('login') }}" class="inline-block mt-4 text-brand-green font-bold hover:underline">Daftar Sekarang &rarr;</a>
+            <p class="text-gray-400">Jadilah mitra pertama kami dan mulai berjualan!</p>
+            <a href="{{ route('login') }}" class="inline-block mt-6 text-brand-green font-bold hover:underline">Gabung Sebagai Mitra &rarr;</a>
         </div>
         @endif
     </div>
@@ -366,7 +398,7 @@
                         </div>
                     </div>
 
-                    <!-- VIEW 2: MENU CUSTOMIZATION (SUDAH ADA ADDONS) -->
+                    <!-- VIEW 2: MENU CUSTOMIZATION -->
                     <div x-show="modalView === 'menu_customization'">
                         <button @click="backToMerchant()" class="text-gray-400 text-sm hover:text-white mb-4 flex items-center gap-1">&larr; Kembali ke Menu</button>
                         <div class="flex gap-4 mb-6">
@@ -377,21 +409,23 @@
                             </div>
                         </div>
 
-                        <!-- ADDONS SECTION (INI YANG KEMBALI) -->
-                        <div class="mb-6">
-                            <h4 class="font-bold text-white mb-3">Tambahan (Opsional)</h4>
-                            <div class="space-y-2">
-                                <template x-for="addon in selectedMenu.addons_available" :key="addon.name">
-                                    <label class="flex items-center justify-between p-3 rounded-lg border border-gray-700 cursor-pointer hover:bg-gray-800 transition">
-                                        <div class="flex items-center gap-3">
-                                            <input type="checkbox" @change="toggleAddon(addon)" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-brand-green focus:ring-brand-green">
-                                            <span class="text-gray-300 text-sm" x-text="addon.name"></span>
-                                        </div>
-                                        <span class="text-gray-400 text-xs" x-text="addon.price > 0 ? '+Rp ' + formatRupiah(addon.price) : 'Gratis'"></span>
-                                    </label>
-                                </template>
+                        <!-- ADDONS SECTION -->
+                        <template x-if="selectedMenu.addons_available && selectedMenu.addons_available.length > 0">
+                            <div class="mb-6">
+                                <h4 class="font-bold text-white mb-3">Tambahan (Opsional)</h4>
+                                <div class="space-y-2">
+                                    <template x-for="addon in selectedMenu.addons_available" :key="addon.name">
+                                        <label class="flex items-center justify-between p-3 rounded-lg border border-gray-700 cursor-pointer hover:bg-gray-800 transition">
+                                            <div class="flex items-center gap-3">
+                                                <input type="checkbox" @change="toggleAddon(addon)" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-brand-green focus:ring-brand-green">
+                                                <span class="text-gray-300 text-sm" x-text="addon.name"></span>
+                                            </div>
+                                            <span class="text-gray-400 text-xs" x-text="addon.price > 0 ? '+Rp ' + formatRupiah(addon.price) : 'Gratis'"></span>
+                                        </label>
+                                    </template>
+                                </div>
                             </div>
-                        </div>
+                        </template>
 
                         <div class="mb-6">
                             <h4 class="font-bold text-white mb-2">Catatan Pesanan</h4>
@@ -429,7 +463,7 @@
                                         <template x-if="item.addons && item.addons.length > 0">
                                             <div class="mt-1 flex flex-wrap gap-1">
                                                 <template x-for="ad in item.addons">
-                                                    <span class="text-[10px] bg-gray-700 px-2 py-0.5 rounded text-gray-300" x-text="ad.name"></span>
+                                                    <span class="text-[10px] bg-gray-700 px-2 py-0.5 rounded text-gray-300" x-text="ad.name + ' (+' + formatRupiah(ad.price) + ')'"></span>
                                                 </template>
                                             </div>
                                         </template>

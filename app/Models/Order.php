@@ -14,7 +14,15 @@ class Order extends Model
         // coordinates saved at checkout
         'dest_latitude', 'dest_longitude',
         // timestamps
-        'picked_at'
+        'picked_at',
+        // TAMBAHAN BARU: items (Menyimpan data keranjang dalam 1 kolom)
+        'items' 
+    ];
+
+    // Casting agar otomatis berubah jadi Array saat diambil dari DB
+    protected $casts = [
+        'items' => 'array', 
+        'picked_at' => 'datetime',
     ];
 
     public function merchant()
