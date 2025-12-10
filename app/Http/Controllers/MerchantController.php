@@ -37,46 +37,26 @@ class MerchantController extends Controller
         ]);
     }
 
-    public function index() {
+      public function index() {
         $user = Auth::user();
-
-        if ($user->role !== 'merchant') {
-            return redirect('/');
-        }
+        if ($user->role !== 'merchant') return redirect('/');
 
         $products = Product::where('merchant_id', $user->id)->latest()->get();
 
+        // Data statis untuk load awal (Pending + Cooking + Ready)
         $incomingOrders = Order::where('merchant_id', $user->id)
                     ->whereIn('status', ['pending', 'cooking', 'ready'])
                     ->with('driver')
                     ->latest()
                     ->get();
 
-        $totalRevenue = Order::where('merchant_id', $user->id)
-                ->where('status', 'completed')
-                ->sum('total_price');
-
-        $revenueThisMonth = Order::where('merchant_id', $user->id)
-                    ->where('status', 'completed')
-                    ->whereMonth('created_at', Carbon::now()->month)
-                    ->sum('total_price');
-
-        $revenueToday = Order::where('merchant_id', $user->id)
-                    ->where('status', 'completed')
-                    ->whereDate('created_at', Carbon::today())
-                    ->sum('total_price');
-
-        $orderHistory = Order::where('merchant_id', $user->id)
-                    ->with(['customer', 'driver'])
-                    ->latest()
-                    ->limit(50)
-                    ->get();
-
+        $totalRevenue = Order::where('merchant_id', $user->id)->where('status', 'completed')->sum('total_price');
+        $revenueThisMonth = Order::where('merchant_id', $user->id)->where('status', 'completed')->whereMonth('created_at', Carbon::now()->month)->sum('total_price');
+        $revenueToday = Order::where('merchant_id', $user->id)->where('status', 'completed')->whereDate('created_at', Carbon::today())->sum('total_price');
+        
+        $orderHistory = Order::where('merchant_id', $user->id)->with(['customer', 'driver'])->latest()->limit(50)->get();
         $merchantOrderIds = Order::where('merchant_id', $user->id)->pluck('id');
-        $recentActivities = OrderActivity::whereIn('order_id', $merchantOrderIds)
-                    ->latest()
-                    ->limit(20)
-                    ->get();
+        $recentActivities = OrderActivity::whereIn('order_id', $merchantOrderIds)->latest()->limit(20)->get();
 
         return view('merchant.dashboard', compact('user', 'products', 'incomingOrders', 'totalRevenue', 'revenueThisMonth', 'revenueToday', 'orderHistory', 'recentActivities'));
     }
@@ -238,5 +218,27 @@ public function updateProfile(Request $request)
         $user->save();
 
         return back()->with('success', 'Profil diperbarui!');
+    }
+
+      public function countPendingOrders()
+    {
+        $count = \App\Models\Order::where('merchant_id', \Illuminate\Support\Facades\Auth::id())
+                    ->where('status', 'pending')
+                    ->count();
+        
+        return response()->json(['count' => $count]);
+    }
+    public function getPendingOrdersApi()
+    {
+        $orders = \App\Models\Order::where('merchant_id', \Illuminate\Support\Facades\Auth::id())
+                    ->where('status', 'pending')
+                    ->with('customer') // Load data customer
+                    ->latest()
+                    ->get();
+        
+        return response()->json([
+            'count' => $orders->count(),
+            'orders' => $orders
+        ]);
     }
 }

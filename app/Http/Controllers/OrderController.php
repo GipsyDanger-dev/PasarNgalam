@@ -9,9 +9,29 @@ use Illuminate\Support\Facades\Auth;
 
 class OrderController extends Controller
 {
+    /**
+     * Helper Function: Hitung Jarak (Haversine Formula)
+     * Menghitung jarak antara dua titik koordinat dalam Kilometer
+     */
+    private function calculateDistance($lat1, $lon1, $lat2, $lon2)
+    {
+        $earthRadius = 6371; // Radius bumi dalam km
+
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+
+        $a = sin($dLat / 2) * sin($dLat / 2) +
+             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+             sin($dLon / 2) * sin($dLon / 2);
+
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+        return $earthRadius * $c; // Hasil dalam Kilometer
+    }
+
     public function checkout(Request $request)
     {
-        // 1. Validasi
+        // 1. Validasi Input
         $request->validate([
             'cart_data' => 'required',
             'delivery_address' => 'required',
@@ -34,7 +54,10 @@ class OrderController extends Controller
             $merchantId = $randomMerchant ? $randomMerchant->id : 1;
         }
 
-        // 3. Koordinat Logic
+        // Ambil Data Merchant (Penting untuk koordinat awal)
+        $merchant = User::find($merchantId);
+
+        // 3. Koordinat Logic (Lokasi Customer)
         $lat = $request->input('latitude');
         $lng = $request->input('longitude');
         if (empty($lat) || empty($lng)) {
@@ -46,7 +69,23 @@ class OrderController extends Controller
             return back()->with('error', 'Koordinat pengiriman tidak ditemukan. Pastikan Anda memilih lokasi pada peta.');
         }
 
-        // 4. Cari Driver (Rumus Haversine)
+        // --- 4. LOGIKA HITUNG ONGKIR DINAMIS ---
+        $deliveryFee = 7000; // Harga Default (0 - 5 KM)
+        
+        if ($merchant && $merchant->latitude && $merchant->longitude) {
+            // Hitung jarak Merchant ke Customer
+            $distance = $this->calculateDistance($merchant->latitude, $merchant->longitude, $lat, $lng);
+            
+            // Jika jarak di atas 5 KM
+            if ($distance > 5) {
+                // Hitung kelebihan jarak (dibulatkan ke atas, misal 5.1 km dianggap lebih 1 km)
+                $extraKm = ceil($distance - 5);
+                $deliveryFee = 7000 + ($extraKm * 1000);
+            }
+        }
+        // -------------------------------------
+
+        // 5. Cari Driver Terdekat (Rumus Haversine SQL)
         $assignedDriver = User::select("users.*")
             ->selectRaw("(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance", [$lat, $lng, $lat])
             ->where('role', 'driver')
@@ -57,14 +96,12 @@ class OrderController extends Controller
 
         // Fallback jika tidak ada driver
         if (!$assignedDriver) {
-            // Opsional: Tetap buat order tapi driver_id null (menunggu driver online)
              $assignedDriver = null; 
         }
 
-        // 5. Create Order Header
+        // 6. Create Order Header
         $paymentCode = 'PAY' . strtoupper(uniqid());
 
-        // --- PERBAIKAN: SIMPAN CART LANGSUNG KE KOLOM ITEMS ---
         $order = Order::create([
             'customer_id' => Auth::id() ?? 1,
             'merchant_id' => $merchantId,
@@ -73,20 +110,19 @@ class OrderController extends Controller
             'dest_latitude' => $lat,
             'dest_longitude' => $lng,
             'total_price' => $request->total_amount,
-            'delivery_fee' => 5000,
+            
+            'delivery_fee' => $deliveryFee, // Gunakan hasil perhitungan dinamis
+            
             'status' => 'pending',
             'payment_method' => $request->payment_method,
             'payment_status' => 'pending',  
             'payment_code' => $paymentCode,
-            'items' => $cart // <--- Data keranjang disimpan di sini (Array otomatis jadi JSON)
+            'items' => $cart // Simpan data keranjang (Array otomatis jadi JSON di DB)
         ]);
 
-        // HAPUS BAGIAN FOREACH ORDERITEM YANG BIKIN ERROR
-        // (Sudah tidak diperlukan karena data sudah masuk ke $order->items)
-
-        // Redirect logic
+        // 7. Redirect Logic
         if ($request->payment_method === 'cod') {
-            $order->update(['payment_status' => 'paid']); // Anggap lunas kalau COD (atau pending sampai bayar)
+            $order->update(['payment_status' => 'paid']); // Anggap lunas kalau COD (untuk flow sederhana)
             return redirect()->route('order.track', $order->id)
                            ->with('success', 'Pesanan berhasil dibuat! Bayar tunai ke kurir saat sampai.');
         }
@@ -141,7 +177,6 @@ class OrderController extends Controller
 
     public function track($id)
     {
-        // Perbaikan: Hapus 'items.product' dari with() karena items sekarang cuma kolom JSON, bukan relasi.
         $order = Order::with(['merchant', 'driver'])->findOrFail($id);
 
         $user = Auth::user();

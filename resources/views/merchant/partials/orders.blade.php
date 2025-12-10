@@ -3,8 +3,8 @@
         
         <h2 class="text-2xl font-bold text-white mb-6">Rekap Keuangan & Pesanan</h2>
 
-        <!-- 1. KARTU STATISTIK KEUANGAN -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <!-- 1. KARTU STATISTIK KEUANGAN (DIKEMBALIKAN) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <!-- Pendapatan Hari Ini -->
             <div class="bg-[#0B1120] p-4 rounded-xl border border-white/5 relative overflow-hidden group hover:border-brand-green/30 transition">
                 <div class="relative z-10">
@@ -33,91 +33,104 @@
             </div>
         </div>
 
-        <!-- 2. DAFTAR PESANAN MASUK (ACTIVE ORDERS) -->
-        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            Pesanan Masuk 
-            @if(count($incomingOrders) > 0)
-                <span class="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full animate-pulse">{{ count($incomingOrders) }}</span>
-            @endif
+        <!-- 2. JUDUL SECTION REALTIME -->
+        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-3">
+            Pesanan Masuk (Realtime) 
+            <span class="flex h-2.5 w-2.5 relative">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+            </span>
         </h3>
 
-        <div class="space-y-4">
-            @forelse($incomingOrders as $order)
-            <div class="bg-[#0B1120] border border-white/10 rounded-xl p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-brand-green/30 transition shadow-lg">
-                
-                <!-- Info Order -->
-                <div class="flex-1">
-                    <div class="flex items-center gap-3 mb-2">
-                        <span class="text-brand-green font-bold font-mono">#ORD-{{ $order->id }}</span>
-                        
-                        <!-- Badge Status -->
-                        @if($order->status == 'pending') 
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 flex items-center gap-1">
-                                <span class="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></span> Baru Masuk
-                            </span>
-                        @elseif($order->status == 'cooking') 
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center gap-1">
-                                <span class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></span> Sedang Dimasak
-                            </span>
-                        @elseif($order->status == 'ready') 
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-green-500/20 text-green-400 border border-green-500/30 flex items-center gap-1">
-                                <span class="w-1.5 h-1.5 bg-green-400 rounded-full"></span> Siap Diambil
-                            </span>
-                        @endif
-                    </div>
-                    
-                    <p class="text-white font-bold text-xl mb-1">Rp {{ number_format($order->total_price, 0, ',', '.') }}</p>
-                    <p class="text-gray-400 text-sm">Alamat: <span class="text-gray-300">{{ $order->delivery_address }}</span></p>
-                    
-                    <div class="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                        <span class="flex items-center gap-1">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                            {{ $order->customer->name ?? 'Pelanggan' }}
-                        </span>
-                        <span class="flex items-center gap-1">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            {{ $order->created_at->diffForHumans() }}
-                        </span>
-                    </div>
-                </div>
+        <!-- 3. LIST PESANAN PENDING (REALTIME VIA ALPINE) -->
+        <div class="space-y-4 mb-8">
+            
+            <!-- Jika tidak ada pesanan pending -->
+            <div x-show="pendingCount === 0" class="text-center py-8 bg-[#0B1120] rounded-xl border border-dashed border-gray-700">
+                <div class="text-4xl mb-3 grayscale opacity-50">💤</div>
+                <h3 class="text-gray-400 font-medium text-sm">Belum ada pesanan baru.</h3>
+                <p class="text-[10px] text-gray-500 mt-1">Sistem akan otomatis berbunyi jika ada pesanan masuk.</p>
+            </div>
 
-                <!-- Action Buttons -->
-                <div class="flex gap-2 w-full md:w-auto">
-                    @if($order->status == 'pending')
-                        <form action="{{ route('merchant.order.update', $order->id) }}" method="POST" class="w-full">
-                            @csrf @method('PUT')
+            <!-- LOOPING ORDER PENDING -->
+            <template x-for="order in pendingOrders" :key="order.id">
+                <div class="bg-[#0B1120] border-2 border-red-500/50 rounded-xl p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-[0_0_20px_rgba(239,68,68,0.2)] animate-flash-red">
+                    
+                    <!-- Info Order -->
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="text-brand-green font-bold font-mono" x-text="'#ORD-' + order.id"></span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500 text-white animate-pulse">
+                                🔔 BARU MASUK!
+                            </span>
+                        </div>
+                        
+                        <p class="text-white font-bold text-2xl mb-1" x-text="'Rp ' + formatRupiah(order.total_price)"></p>
+                        <p class="text-gray-400 text-sm">Alamat: <span class="text-gray-300" x-text="order.delivery_address"></span></p>
+                        
+                        <div class="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                            <span class="flex items-center gap-1">
+                                👤 <span x-text="order.customer ? order.customer.name : 'Pelanggan'"></span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="w-full md:w-auto">
+                        <!-- Form Terima Pesanan -->
+                        <form :action="'/merchant/order/' + order.id + '/update'" method="POST" class="w-full">
+                            @csrf 
+                            @method('PUT')
                             <input type="hidden" name="status" value="cooking">
-                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white px-5 py-3 rounded-xl font-bold text-sm transition shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2">
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white px-6 py-4 rounded-xl font-bold text-sm transition shadow-lg flex items-center justify-center gap-2 transform hover:scale-105">
                                 🍳 Terima & Masak
                             </button>
                         </form>
-                    @elseif($order->status == 'cooking')
-                        <form action="{{ route('merchant.order.update', $order->id) }}" method="POST" class="w-full">
-                            @csrf @method('PUT')
-                            <input type="hidden" name="status" value="ready">
-                            <button type="submit" class="w-full bg-brand-green hover:bg-green-400 text-black px-5 py-3 rounded-xl font-bold text-sm transition shadow-lg shadow-green-900/20 flex items-center justify-center gap-2 animate-pulse">
-                                ✅ Pesanan Siap
-                            </button>
-                        </form>
-                    @else
-                        <button disabled class="w-full bg-gray-700 text-gray-400 px-5 py-3 rounded-xl font-bold text-sm cursor-not-allowed border border-gray-600 flex items-center justify-center gap-2">
-                            🛵 Menunggu Driver
-                        </button>
-                    @endif
+                    </div>
                 </div>
-            </div>
-            @empty
-            <div class="text-center py-12 bg-[#0B1120] rounded-xl border border-dashed border-gray-700">
-                <div class="text-5xl mb-4 grayscale opacity-50">💤</div>
-                <h3 class="text-gray-400 font-medium">Belum ada pesanan aktif saat ini.</h3>
-                <p class="text-xs text-gray-500 mt-1">Pesanan baru akan muncul otomatis disini.</p>
-            </div>
-            @endforelse
+            </template>
         </div>
         
-        <!-- 3. RIWAYAT PESANAN (HISTORY) -->
-        <div class="mt-8 border-t border-white/5 pt-6">
-            <h3 class="text-lg font-bold text-white mb-4">Riwayat Pesanan Terbaru</h3>
+        <!-- 4. PESANAN SEDANG DIPROSES (SERVER SIDE) -->
+        <!-- Menampilkan yang statusnya 'cooking' atau 'ready' -->
+        @if($incomingOrders->where('status', '!=', 'pending')->count() > 0)
+        <h3 class="text-lg font-bold text-white mb-4 border-t border-white/10 pt-6">Sedang Diproses</h3>
+        <div class="space-y-3 mb-8">
+            @foreach($incomingOrders->where('status', '!=', 'pending') as $order)
+                <div class="bg-[#0B1120] p-4 rounded-xl border border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 hover:border-brand-green/30 transition">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xs font-mono text-gray-500">#ORD-{{ $order->id }}</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase {{ $order->status == 'cooking' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30' }}">
+                                {{ $order->status }}
+                            </span>
+                        </div>
+                        <div class="font-bold text-white text-sm">Rp {{ number_format($order->total_price,0,',','.') }}</div>
+                        <div class="text-xs text-gray-500">{{ $order->customer->name ?? 'Pelanggan' }}</div>
+                    </div>
+
+                    <!-- Tombol Aksi Lanjutan -->
+                    <div class="flex gap-2">
+                        @if($order->status == 'cooking')
+                            <form action="{{ route('merchant.order.update', $order->id) }}" method="POST">
+                                @csrf @method('PUT')
+                                <input type="hidden" name="status" value="ready">
+                                <button class="bg-brand-green text-black px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-400 shadow-lg animate-pulse">✅ Pesanan Siap</button>
+                            </form>
+                        @elseif($order->status == 'ready')
+                            <button disabled class="bg-gray-700 text-gray-400 px-4 py-2 rounded-lg text-xs font-bold cursor-not-allowed border border-gray-600 flex items-center gap-1">
+                                🛵 Menunggu Driver
+                            </button>
+                        @endif
+                    </div>
+                </div>
+            @endforeach
+        </div>
+        @endif
+
+        <!-- 5. RIWAYAT PESANAN SELESAI (DIKEMBALIKAN) -->
+        <div class="border-t border-white/10 pt-6">
+            <h3 class="text-lg font-bold text-white mb-4">Riwayat Pesanan Terakhir</h3>
             <div class="space-y-3">
                 @forelse($orderHistory as $h)
                     <div class="bg-[#0B1120] p-4 rounded-xl border border-white/5 flex items-center justify-between hover:bg-[#111a2e] transition">

@@ -7,6 +7,7 @@
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
 
@@ -111,7 +112,10 @@
                   qty: this.qty,
                   addons: JSON.parse(JSON.stringify(this.selectedAddons)), 
                   note: this.note,
-                  total: this.currentItemTotal
+                  total: this.currentItemTotal,
+                  // PENTING: Simpan koordinat merchant agar bisa dihitung jaraknya di checkout
+                  merchant_lat: this.selectedMerchant.lat, 
+                  merchant_lng: this.selectedMerchant.lng
               };
               
               this.cart.push(item);
@@ -249,13 +253,12 @@
     </div>
 
     <!-- CONTENT GRID -->
-   <!-- CONTENT GRID -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 relative z-20 pb-20">
         @if($merchants->count() > 0)
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             @foreach($merchants as $merchant)
             @php
-                // 1. LOGIKA MENU (Tetap sama)
+                // 1. LOGIKA MENU
                 $menusData = $merchant->products->map(function($p) use ($merchant) {
                     $addons = [];
                     if (!empty($p->addons)) {
@@ -284,21 +287,20 @@
                     ];
                 })->values()->toArray();
 
-                // 2. LOGIKA BANNER TOKO (PERBAIKAN DISINI)
-                // Cek kolom 'banner' DULU, jika kosong cek 'store_banner'
+                // 2. LOGIKA BANNER TOKO & KOORDINAT
                 $bannerPath = $merchant->banner ?? $merchant->store_banner;
-
                 if (!empty($bannerPath)) {
-                    // Jika ada file banner di database, pakai itu
                     $merchantImg = asset('storage/' . $bannerPath);
                 } else {
-                    // Jika TIDAK ADA, pakai inisial nama toko (Fallback)
                     $merchantImg = 'https://ui-avatars.com/api/?name='.urlencode($merchant->store_name).'&background=00E073&color=000&size=400&bold=true&font-size=0.33';
                 }
 
-                // Susun Data Merchant Final
+                // Susun Data Merchant Final (Termasuk LAT/LNG untuk hitung ongkir)
                 $merchantData = [
+                    'id' => $merchant->id,
                     'name' => $merchant->store_name ?? $merchant->name,
+                    'lat' => $merchant->latitude,   // PENTING: Untuk Ongkir
+                    'lng' => $merchant->longitude,  // PENTING: Untuk Ongkir
                     'category' => 'Aneka Kuliner',
                     'rating' => '4.8',
                     'img' => $merchantImg, 
@@ -314,7 +316,7 @@
                          class="w-full h-full object-cover group-hover:scale-110 transition duration-700"
                          onerror="this.onerror=null; this.src='https://placehold.co/600x400?text=No+Image';">
                     
-                    <!-- Overlay Gelap (Agar tulisan terbaca jika gambar terang) -->
+                    <!-- Overlay Gelap -->
                     <div class="absolute inset-0 bg-gradient-to-t from-brand-dark/90 via-transparent to-transparent"></div>
                     
                     <!-- Badge Status Buka -->
