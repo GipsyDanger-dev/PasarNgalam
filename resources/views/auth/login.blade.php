@@ -45,14 +45,14 @@
     </div>
 
     <!-- MAIN CONTAINER -->
-    <div class="relative z-10 w-full max-w-5xl bg-[#1E293B]/60 backdrop-blur-xl border border-white/10 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px]">
+    <div class="relative z-10 w-full max-w-5xl bg-[#1E293B]/60 backdrop-blur-xl border border-white/10 rounded-2rem shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px]">
         
         <!-- LEFT SIDE: VISUAL -->
         <div class="hidden md:flex w-1/2 relative bg-gray-900 items-center justify-center p-12 overflow-hidden group">
             <div class="absolute inset-0 bg-brand-green/10 mix-blend-overlay z-10"></div>
             <img :src="role === 'merchant' ? 'https://images.unsplash.com/photo-1556910103-1c02745a30bf?q=80&w=800' : (role === 'driver' ? 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?q=80&w=800' : 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1000')" 
                  class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition duration-1000">
-            <div class="absolute inset-0 bg-gradient-to-t from-brand-dark via-brand-dark/40 to-transparent"></div>
+            <div class="absolute inset-0 bg-linear-to-t from-brand-dark via-brand-dark/40 to-transparent"></div>
             <div class="relative z-20 text-center">
                 <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-green/20 backdrop-blur-md border border-brand-green/30 mb-6 shadow-[0_0_30px_rgba(0,224,115,0.3)]">
                     <svg class="w-8 h-8 text-brand-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
