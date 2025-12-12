@@ -9,9 +9,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
     
-    <!-- LEAFLET MAPS (PENTING) -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- LEAFLET MAPS (PENTING) - gunakan CDN jsDelivr agar lebih stabil di hosting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-V2v1jL1rCsQVnDsMy7MmH9MuNoMNFc13JUO2y+h7J3s=" crossorigin="anonymous" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-Dov1AwlM1c01M9vrL1jAU6RzGmmKzBSSzvZAXPQTgGI=" crossorigin="anonymous"></script>
 
     <script>
         tailwind.config = {

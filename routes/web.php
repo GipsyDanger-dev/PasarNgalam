@@ -25,7 +25,7 @@ Route::get('/', function () {
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.process');
 Route::post('/register', [AuthController::class, 'register'])->name('register.process');
-Route::get('/register', [AuthController::class, 'register'])->name('register.view'); // Tambahan untuk GET register
+Route::get('/register', [AuthController::class, 'showLoginForm'])->name('register.view'); // GET hanya untuk tampilkan form
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 
