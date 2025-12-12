@@ -31,12 +31,15 @@ class AuthController extends Controller
             return redirect()->intended('/');
         }
 
-        return back()->withErrors(['email' => 'Email atau password salah.']);
+        return back()
+            ->withErrors(['email' => 'Email atau password salah.'])
+            ->with('login_errors', true)
+            ->withInput();
     }
 
     public function register(Request $request)
     {
-        $request->validate([
+        $validator = \Validator::make($request->all(), [
             'name' => 'required',
             'email' => 'required|email|unique:users',
             'password' => 'required|min:6',
@@ -44,13 +47,26 @@ class AuthController extends Controller
             'phone' => 'required', // WA Wajib
         ]);
 
+        if ($validator->fails()) {
+            return back()
+                ->withErrors($validator)
+                ->with('register_errors', true)
+                ->withInput();
+        }
+
         // Validasi Tambahan: Merchant wajib isi lokasi
         if ($request->role === 'merchant') {
-            $request->validate([
+            $validatorMerchant = \Validator::make($request->all(), [
                 'latitude' => 'required',
                 'longitude' => 'required',
                 'store_name' => 'required'
             ]);
+            if ($validatorMerchant->fails()) {
+                return back()
+                    ->withErrors($validatorMerchant)
+                    ->with('register_errors', true)
+                    ->withInput();
+            }
         }
 
         $user = User::create([

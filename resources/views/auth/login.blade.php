@@ -80,6 +80,20 @@
                     <h3 class="text-2xl font-bold text-white">Selamat Datang! 👋</h3>
                     <p class="text-gray-400 text-sm mt-1">Masuk untuk melanjutkan.</p>
                 </div>
+                @if (session('error'))
+                    <div class="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/40 text-red-200 text-sm">
+                        {{ session('error') }}
+                    </div>
+                @endif
+                @if ($errors->any() && session('login_errors'))
+                    <div class="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/40 text-red-200 text-sm">
+                        <ul class="list-disc list-inside space-y-1">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
                 <form action="{{ route('login.process') }}" method="POST" class="space-y-4">
                     @csrf
                     <div><label class="block text-gray-400 text-xs font-bold uppercase mb-1">Email</label><input type="email" name="email" class="form-input" required></div>
@@ -100,6 +114,15 @@
                         <button @click="role = 'driver'" :class="role === 'driver' ? 'bg-gray-700 text-brand-green border border-brand-green/30' : 'text-gray-400 hover:text-white'" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all">Driver</button>
                     </div>
                 </div>
+                @if ($errors->any() && session('register_errors'))
+                    <div class="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/40 text-red-200 text-sm">
+                        <ul class="list-disc list-inside space-y-1">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
 
                 <form action="{{ route('register.process') }}" method="POST" class="space-y-3">
                     @csrf
