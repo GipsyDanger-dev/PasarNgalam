@@ -249,7 +249,7 @@
                     </div>
 
                     <!-- MOBILE HAMBURGER BUTTON (Muncul hanya di HP) -->
-                    <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden bg-gray-800 p-2.5 rounded-xl hover:bg-gray-700 transition border border-gray-600 text-gray-300">
+                    <button @click="mobileMenuOpen = !mobileMenuOpen" aria-label="Buka menu" class="block md:hidden bg-gray-800 p-2.5 rounded-xl hover:bg-gray-700 transition border border-gray-600 text-gray-300 z-50">
                         <svg x-show="!mobileMenuOpen" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
