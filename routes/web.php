@@ -51,6 +51,9 @@ Route::middleware(['auth'])->group(function () {
     // 4. Halaman Pembayaran + Konfirmasi
     Route::get('/order/{id}/payment', [OrderController::class, 'showPayment'])->name('order.payment');
     Route::post('/order/{id}/payment/confirm', [OrderController::class, 'confirmPayment'])->name('order.payment.confirm');
+    
+    // 6. Submit Review (Rating)
+    Route::post('/order/{id}/review', [OrderController::class, 'submitReview'])->name('order.review');
 
 });
 

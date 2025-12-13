@@ -6,6 +6,8 @@
     <title>Mitra PasarNgalam - {{ $user->store_name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pusher-js@8.4.0/dist/web/pusher.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.15.0/dist/echo.iife.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -51,10 +53,12 @@
           pendingCount: 0,
           audioPermission: false,
           notificationAudio: new Audio('https://cdn.freesound.org/previews/536/536108_11969242-lq.mp3'),
+          EchoInstance: null,
+          subscribedOrderIds: [],
 
           init() {
-              console.log('🚀 Dashboard Ready');
-              this.startPolling(); // Start polling automatically
+              this.fetchOrders();
+              this.startRealtime();
           },
 
           enableNotification() {
@@ -82,11 +86,43 @@
                       }
                       this.pendingCount = data.count;
                       this.pendingOrders = data.orders;
+                      if (this.EchoInstance && Array.isArray(this.pendingOrders)) {
+                          this.pendingOrders.forEach(o => {
+                              const oid = o.id;
+                              if (!this.subscribedOrderIds.includes(oid)) {
+                                  this.subscribedOrderIds.push(oid);
+                                  this.EchoInstance.channel('order.' + oid)
+                                      .listen('.order.updated', () => {
+                                          this.fetchOrders();
+                                      });
+                              }
+                          });
+                      }
                   });
           },
 
           formatRupiah(angka) {
               return new Intl.NumberFormat('id-ID').format(angka);
+          },
+
+          startRealtime() {
+              try {
+                  this.EchoInstance = new Echo({
+                      broadcaster: 'reverb',
+                      key: '{{ env('REVERB_APP_KEY') }}',
+                      wsHost: '{{ env('REVERB_HOST', request()->getHost()) }}',
+                      wsPort: {{ env('REVERB_PORT', 443) }},
+                      wssPort: {{ env('REVERB_PORT', 443) }},
+                      forceTLS: true,
+                      enabledTransports: ['ws', 'wss'],
+                  });
+                  this.EchoInstance.channel('merchant.{{ $user->id }}')
+                      .listen('.order.updated', () => {
+                          this.fetchOrders();
+                      });
+              } catch (e) {
+                  this.startPolling();
+              }
           },
 
           openModal(mode, data = null) {

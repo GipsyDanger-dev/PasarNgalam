@@ -231,14 +231,9 @@
 
                 init() {
                     this.initMap();
+                    this.initEchoHook();
                     
-                    // Listen to Realtime Event
-                    if (window.Echo) {
-                        Echo.channel('driver-location.{{ $order->driver_id }}')
-                            .listen('DriverLocationUpdated', (e) => {
-                                this.updateDriverMarker(e.latitude, e.longitude);
-                            });
-                    }
+                    if (window.Echo) {}
 
                     // --- FITUR AUTO RELOAD STATUS ---
                     setInterval(() => {
@@ -305,9 +300,37 @@
                         this.driverMarker = L.marker([lat, lng], {icon: driverIcon}).addTo(this.map);
                         this.hasDriver = true;
                     }
+                },
+                initEchoHook() {
+                    window.updateDriverMarkerHook = (lat, lng) => { this.updateDriverMarker(lat, lng); };
                 }
             }
         }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/pusher-js@8.4.0/dist/web/pusher.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.15.0/dist/echo.iife.js"></script>
+    <script>
+        const EchoInstance = new Echo({
+            broadcaster: 'reverb',
+            key: '{{ env('REVERB_APP_KEY') }}',
+            wsHost: '{{ env('REVERB_HOST', request()->getHost()) }}',
+            wsPort: {{ env('REVERB_PORT', 443) }},
+            wssPort: {{ env('REVERB_PORT', 443) }},
+            forceTLS: true,
+            enabledTransports: ['ws', 'wss'],
+        });
+        @if($order->driver_id)
+        EchoInstance.channel('driver.{{ $order->driver_id }}')
+            .listen('.driver.location.updated', (e) => {
+                if (window.updateDriverMarkerHook) window.updateDriverMarkerHook(e.latitude, e.longitude);
+            });
+        @endif
+        EchoInstance.channel('order.{{ $order->id }}')
+            .listen('.order.updated', (e) => {
+                if (e.status === 'completed') {
+                    window.location.reload();
+                }
+            });
     </script>
 </body>
 </html>

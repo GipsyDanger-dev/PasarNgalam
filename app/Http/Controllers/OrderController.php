@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Review; // Pastikan Model Review di-import
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Events\OrderUpdated;
 
 class OrderController extends Controller
 {
@@ -115,6 +116,10 @@ class OrderController extends Controller
             'items' => $cart 
         ]);
 
+        try {
+            event(new OrderUpdated($order->id, $order->merchant_id, $order->driver_id, $order->status));
+        } catch (\Exception $e) {}
+
         if ($request->payment_method === 'cod') {
             return redirect()->route('order.track', $order->id)
                            ->with('success', 'Pesanan berhasil dibuat! Siapkan uang tunai.');
@@ -150,6 +155,10 @@ class OrderController extends Controller
         }
 
         $order->update(['payment_status' => 'paid']);
+
+        try {
+            event(new OrderUpdated($order->id, $order->merchant_id, $order->driver_id, $order->status));
+        } catch (\Exception $e) {}
 
         return redirect()->route('order.track', $order->id)
                        ->with('success', 'Pembayaran berhasil dikonfirmasi!');
@@ -229,6 +238,9 @@ class OrderController extends Controller
 
         $order->status = $request->status;
         $order->save();
+        try {
+            event(new OrderUpdated($order->id, $order->merchant_id, $order->driver_id, $order->status));
+        } catch (\Exception $e) {}
         return back()->with('success', 'Status pesanan diperbarui!');
     }
 

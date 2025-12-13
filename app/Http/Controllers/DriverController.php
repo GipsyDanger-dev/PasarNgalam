@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\OrderActivity;
 use App\Models\Review; // Pastikan Model Review sudah dibuat
 use App\Events\DriverLocationUpdated;
+use App\Events\OrderUpdated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -28,7 +29,7 @@ class DriverController extends Controller
             return response()->json(['error' => 'Invalid data'], 422);
         }
 
-        $driver = Auth::user();
+        $driver = User::find(Auth::id());
         if (!$driver) return response()->json(['error' => 'Unauthenticated'], 401);
 
         $driver->latitude = $request->input('latitude');
@@ -51,9 +52,16 @@ class DriverController extends Controller
     public function toggleStatus(Request $request)
     {
         $driver = User::find(Auth::id());
-        $driver->is_online = $request->status;
+        if (!$driver) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+        if ($driver->role !== 'driver') {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+        $status = $request->boolean('status');
+        $driver->is_online = $status;
         $driver->save();
-        return response()->json(['is_online' => $driver->is_online]);
+        return response()->json(['is_online' => (bool)$driver->is_online]);
     }
 
     /**
@@ -178,6 +186,9 @@ class DriverController extends Controller
         if ($order) {
             $order->update(['status' => 'completed']);
         }
+        try {
+            event(new OrderUpdated($order->id, $order->merchant_id, $order->driver_id, $order->status));
+        } catch (\Exception $e) {}
         return back()->with('success', 'Selesai! Menunggu order berikutnya...');
     }
 
@@ -208,6 +219,10 @@ class DriverController extends Controller
                 'action' => 'picked_up',
                 'message' => 'Driver ' . Auth::user()->name . ' mengambil pesanan.',
             ]);
+        } catch (\Exception $e) {}
+
+        try {
+            event(new OrderUpdated($order->id, $order->merchant_id, $order->driver_id, $order->status));
         } catch (\Exception $e) {}
 
         return back()->with('success', 'Selamat mengantar! Hati-hati di jalan.');
