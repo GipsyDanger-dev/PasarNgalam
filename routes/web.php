@@ -85,6 +85,7 @@ Route::middleware(['auth'])->group(function () {
     
     // Order Action (Selesaikan)
     Route::post('/driver/order/{id}/complete', [DriverController::class, 'completeOrder'])->name('driver.order.complete'); 
+    Route::post('/driver/order/{id}/accept', [DriverController::class, 'acceptOrder'])->name('driver.order.accept'); 
 });
 
 
