@@ -38,7 +38,7 @@
 
     <!-- MODAL RATING (Hanya Muncul Jika showRatingModal = true) -->
     @if($showRatingModal)
-    <div x-data="{ mRating: 0, dRating: 0 }" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+    <div x-data="{ mRating: 0, dRating: 0 }" class="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
         <div class="glass-panel w-full max-w-md rounded-3xl p-6 relative animate-bounce-in shadow-[0_0_50px_rgba(0,224,115,0.2)] border border-brand-green/30">
             
             <div class="text-center mb-6">
