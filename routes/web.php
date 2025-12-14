@@ -8,6 +8,7 @@ use App\Http\Controllers\DriverController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\OrderController; 
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 
 // --- HALAMAN UTAMA (USER DASHBOARD / LANDING PAGE) ---
 Route::get('/', function () {
@@ -97,3 +98,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
     Route::put('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
 });
+
+// Fallback untuk melayani file di disk 'public' tanpa symlink di hosting
+Route::get('/storage/{path}', function ($path) {
+    if (!Storage::disk('public')->exists($path)) {
+        abort(404);
+    }
+    $absolutePath = Storage::disk('public')->path($path);
+    $mime = function_exists('mime_content_type') ? mime_content_type($absolutePath) : 'application/octet-stream';
+    return response()->file($absolutePath, ['Content-Type' => $mime]);
+})->where('path', '.*');
